@@ -22,7 +22,8 @@ ATLAS politics/
 │   ├── 02_etl_censo.py          # INDEC Censo 2022: indicadores prov + depto
 │   ├── 03_etl_apis.py           # Cataloga endpoints en vivo (argentinadatos, BCRA)
 │   ├── 04_etl_localidades.py    # INDEC: 3.526 localidades con población
-│   └── 05_etl_radios.py         # INDEC: 50.223 radios censales en 22 provincias
+│   ├── 05_etl_radios.py         # INDEC: 50.223 radios censales en 22 provincias
+│   └── 06_etl_elecciones.py     # DINE: Generales 2023 + Balotaje 2023 por prov+depto
 ├── web/
 │   ├── index.html
 │   ├── css/app.css
@@ -42,12 +43,25 @@ ATLAS politics/
 | Localidades | INDEC 2022 | `localidades.geojson` (puntos) | 3.526 |
 | Radios censales | INDEC 2022 | `radios/<codigo_prov>.geojson` (22 archivos lazy-load) | 50.223 |
 
-## Indicadores integrados (Censo 2022)
+## Datasets integrados
+
+### Censo 2022 INDEC
 
 Por provincia, departamento, localidad y radio:
 - `personas`, `mujeres`, `varones`
 - `hogares`, `viv_part`, `viv_part_h`
 - Derivados: `personas_por_vivienda`, `personas_por_hogar`, `idx_masculinidad`
+
+### Elecciones Generales 2023 (Presidente)
+
+Por provincia + departamento (matching por nombre con INDEC):
+- `lla_pct`, `pj_pct`, `jxc_pct`, `hacemos_pct`, `izq_pct`
+- `participacion`, `blanco_pct`, `nulo_pct`
+- Conteos crudos: `padron`, `votantes`, `votos_pos`, `lla`, `pj`, `jxc`, `hacemos`, `izq`
+
+### Balotaje 2023 (Presidente)
+
+Mismo schema, solo dos alianzas: `lla_pct` y `pj_pct`.
 
 ## APIs en vivo (consumidas desde el navegador)
 
@@ -60,10 +74,14 @@ Ver `catalogs/apis.json` para esquemas y probe de cada endpoint.
 
 - Mapa Leaflet con basemap CartoDB Dark.
 - **Auto-zoom de capas**: el nivel se cambia solo según el zoom (país → radios).
-- **Choropleth dinámico**: selector de variable colorea la capa activa por quantiles (paleta divergente azul→naranja).
-- **Búsqueda con autocomplete** sobre provincias/deptos/municipios/localidades con zoom directo a la feature.
-- **Tabs**: Territorio (KPIs de la feature clickeada), Economía (dólar, inflación 12m, riesgo país 30d), Política (composición Senado y Diputados por bloque).
-- Carga diferida de radios por provincia (Buenos Aires solo se baja al hacer zoom dentro de PBA).
+- **Selector de dataset**: Censo 2022 / Generales 2023 / Balotaje 2023. Cada uno trae su set de variables y paletas (LLA púrpura, PJ rojo, JxC azul).
+- **Choropleth dinámico**: selector de variable colorea la capa activa por quantiles.
+- **Búsqueda con autocomplete** sobre provincias/deptos/municipios/localidades.
+- **Panel de territorio**: KPIs, fila comparativa (vs media, vs mediana, vs país), mini-histograma con la feature destacada.
+- **Tab Ranking**: top-10 / bottom-10 por variable activa.
+- **Tabs en vivo**: Economía (dólar, inflación 12m, riesgo país 30d), Política (composición Senado y Diputados por bloque).
+- **Permalinks** (`#ds=...&l=...&v=...&c=...&z=...&xy=...`) y export CSV de la capa activa.
+- Carga diferida de radios por provincia.
 
 ## Instalación y uso
 
@@ -76,6 +94,7 @@ python scripts/02_etl_censo.py
 python scripts/03_etl_apis.py
 python scripts/04_etl_localidades.py
 python scripts/05_etl_radios.py
+python scripts/06_etl_elecciones.py
 
 # Servir frontend localmente (desde la raíz del repo)
 python -m http.server 8765

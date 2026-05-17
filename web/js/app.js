@@ -14,6 +14,59 @@ const LEVELS = {
 
 const VAR_SCALES = {
   default: ["#0b3060", "#1762a0", "#3290cf", "#74c0e8", "#c8e6f4", "#fceabb", "#f6b26b", "#e07b39", "#b14a14", "#5e1a04"],
+  // Paletas específicas por partido (más claras = menor %)
+  lla:     ["#1b1730","#241d4c","#33267a","#4533a8","#6444cf","#8d63dd","#b288e8","#d3b5f1","#eedaf9","#fff"],
+  pj:      ["#1f0c10","#3a1218","#5e1a23","#8a1f30","#b32540","#d12f4f","#e15e76","#ed8da0","#f5bcc8","#fff"],
+  jxc:     ["#0a1828","#0e2645","#143a6b","#1b539a","#2e76c1","#5995d4","#84b3e0","#b0d0ea","#dbe7f3","#fff"],
+};
+
+// Catálogo de datasets/variables
+const DATASETS = {
+  censo: {
+    label: "Censo 2022",
+    levels: ["pais", "provincias", "departamentos", "localidades", "radios"],
+    fileFor: (level) => `../data/web/indicadores_${level === "pais" ? "provincias" : level}.json`,
+    vars: [
+      ["personas", "Población"],
+      ["hogares", "Hogares"],
+      ["viv_part_h", "Viv. habitadas"],
+      ["idx_masculinidad", "Índ. masculinidad"],
+      ["personas_por_hogar", "Personas por hogar"],
+      ["personas_por_vivienda", "Personas por vivienda"],
+    ],
+    defaultVar: "personas",
+  },
+  "2023_generales": {
+    label: "Generales 2023 · Presidente",
+    levels: ["provincias", "departamentos"],
+    fileFor: (level) => `../data/web/elecciones_2023_generales_${level === "provincias" ? "provincia" : "departamento"}.json`,
+    vars: [
+      ["lla_pct", "% LLA"],
+      ["pj_pct", "% UP (PJ)"],
+      ["jxc_pct", "% JxC"],
+      ["hacemos_pct", "% Hacemos x Nuestro País"],
+      ["izq_pct", "% FIT"],
+      ["participacion", "Participación"],
+      ["blanco_pct", "% Blanco"],
+      ["nulo_pct", "% Nulo+Recurrido"],
+    ],
+    defaultVar: "lla_pct",
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+  },
+  "2023_balotaje": {
+    label: "Balotaje 2023",
+    levels: ["provincias", "departamentos"],
+    fileFor: (level) => `../data/web/elecciones_2023_balotaje_${level === "provincias" ? "provincia" : "departamento"}.json`,
+    vars: [
+      ["lla_pct", "% LLA"],
+      ["pj_pct", "% UP (PJ)"],
+      ["participacion", "Participación"],
+      ["blanco_pct", "% Blanco"],
+      ["nulo_pct", "% Nulo+Recurrido"],
+    ],
+    defaultVar: "lla_pct",
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : "default",
+  },
 };
 
 const $ = (s, c=document) => c.querySelector(s);
@@ -40,7 +93,8 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.p
 const layerCache = {};
 const radioProvCache = {};
 const radioProvLoading = new Set();
-const indicadores = {};
+const indicadores = { censo: {}, "2023_generales": {}, "2023_balotaje": {} };
+let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
 let selectedLevel = null;
@@ -60,30 +114,61 @@ function quantileBreaks(values, n) {
   for (let i = 1; i < n; i++) b.push(values[Math.floor(values.length * i / n)]);
   return b;
 }
+function paletteName() {
+  const ds = DATASETS[activeDataset];
+  return ds?.paletteFor ? ds.paletteFor(activeVar) : "default";
+}
 function colorFor(v) {
   if (v == null || !isFinite(v) || !activeVar) return null;
-  const ramp = VAR_SCALES.default;
+  const ramp = VAR_SCALES[paletteName()] || VAR_SCALES.default;
   if (!breaks.length) return ramp[Math.floor(ramp.length / 2)];
   let i = 0;
   while (i < breaks.length && v > breaks[i]) i++;
   return ramp[Math.min(i, ramp.length - 1)];
 }
-function getIndic(level, code) { return indicadores[level]?.[code]; }
+function getIndic(level, code) {
+  return indicadores[activeDataset]?.[level]?.[code];
+}
 function labelFor(k) {
+  // Buscar en el dataset activo primero, luego censo, luego fallback
+  for (const dsKey of [activeDataset, "censo"]) {
+    const ds = DATASETS[dsKey];
+    if (!ds) continue;
+    const v = ds.vars.find(([key]) => key === k);
+    if (v) return v[1];
+  }
   return ({
     personas: "Población", mujeres: "Mujeres", varones: "Varones",
     hogares: "Hogares", viv_part: "Viviendas part.", viv_part_h: "Viv. habitadas",
     idx_masculinidad: "Índ. masculinidad",
     personas_por_hogar: "Personas por hogar",
     personas_por_vivienda: "Personas por vivienda",
+    padron: "Padrón", votantes: "Votantes",
+    participacion: "Participación",
+    blanco_pct: "% Blanco", nulo_pct: "% Nulo",
+    lla: "LLA votos", pj: "PJ votos", jxc: "JxC votos",
+    hacemos: "Hacemos votos", izq: "FIT votos",
+    lla_pct: "% LLA", pj_pct: "% UP (PJ)", jxc_pct: "% JxC",
+    hacemos_pct: "% Hacemos", izq_pct: "% FIT",
   })[k] || k;
 }
-function fmtVal(v) {
+function isPctVar(k) {
+  if (!k) return false;
+  return /_pct$/.test(k) || k === "participacion";
+}
+function fmtVal(v, varKey = activeVar) {
   if (v == null) return "—";
+  if (isPctVar(varKey)) return `${fmt2.format(v * 100)}%`;
   if (Math.abs(v) >= 1000) return fmt.format(Math.round(v));
   return fmt2.format(v);
 }
-function indicLevelFor(level) { return level === "pais" ? null : level; }
+function indicLevelFor(level) {
+  // En censo: pais devuelve null (manejo especial vía catalogs); resto, identidad
+  // En elecciones: solo provincias/departamentos
+  if (activeDataset === "censo") return level === "pais" ? null : level;
+  const dsCfg = DATASETS[activeDataset];
+  return dsCfg && dsCfg.levels.includes(level) ? level : null;
+}
 
 // -- Carga --
 async function loadGeo(name) {
@@ -101,14 +186,16 @@ async function loadGeo(name) {
   return layer;
 }
 
-async function loadIndicadores(level) {
-  if (level === "pais") return paisTotales || (paisTotales = await loadPaisTotales());
-  if (indicadores[level]) return indicadores[level];
+async function loadIndicadores(level, ds = activeDataset) {
+  if (ds === "censo" && level === "pais") return paisTotales || (paisTotales = await loadPaisTotales());
+  const dsCfg = DATASETS[ds];
+  if (!dsCfg || !dsCfg.levels.includes(level)) return null;
+  if (indicadores[ds][level]) return indicadores[ds][level];
   try {
-    const r = await fetch(`../data/web/indicadores_${level}.json`);
-    if (r.ok) indicadores[level] = await r.json();
+    const r = await fetch(dsCfg.fileFor(level));
+    if (r.ok) indicadores[ds][level] = await r.json();
   } catch {}
-  return indicadores[level];
+  return indicadores[ds][level];
 }
 async function loadPaisTotales() {
   try {
@@ -143,7 +230,7 @@ function tooltipText(name, p) {
   const nm = p.nombre || (name === "radios" ? `Radio ${p.codigo_indec}` : "—");
   const ind = getIndic(name, p.codigo_indec);
   const v = ind?.[activeVar];
-  if (activeVar && v != null) return `${nm} · ${labelFor(activeVar)}: ${fmt.format(v)}`;
+  if (activeVar && v != null) return `${nm} · ${labelFor(activeVar)}: ${fmtVal(v)}`;
   return nm;
 }
 function bindFeature(name, feat, lyr, parent) {
@@ -268,11 +355,16 @@ async function refreshSelectedPanel(props) {
 function renderKpis(ind) {
   const wrap = $("#sel-kpis");
   if (!ind) { wrap.innerHTML = ""; return; }
-  const main = [["personas","Población"],["hogares","Hogares"],["viv_part_h","Viv. habitadas"],["idx_masculinidad","Índ. masc."]];
+  // KPIs default por dataset
+  const presets = {
+    censo: [["personas","Población"],["hogares","Hogares"],["viv_part_h","Viv. habitadas"],["idx_masculinidad","Índ. masc."]],
+    "2023_generales": [["lla_pct","% LLA"],["pj_pct","% UP"],["jxc_pct","% JxC"],["participacion","Participación"]],
+    "2023_balotaje":  [["lla_pct","% LLA"],["pj_pct","% UP"],["participacion","Particip."],["blanco_pct","% Blanco"]],
+  };
+  const main = presets[activeDataset] || presets.censo;
   wrap.innerHTML = main.map(([k, l]) => {
     if (ind[k] == null) return "";
-    const v = typeof ind[k] === "number" ? fmt.format(ind[k]) : ind[k];
-    return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+    return `<div class="kpi"><div class="v">${fmtVal(ind[k], k)}</div><div class="l">${l}</div></div>`;
   }).join("");
 }
 
@@ -296,7 +388,8 @@ function renderCompare(ind, props) {
       </div>`);
     }
   }
-  if (paisTotales?.[activeVar] != null) {
+  // % del país solo tiene sentido para conteos absolutos del censo
+  if (activeDataset === "censo" && paisTotales?.[activeVar] != null) {
     const pt = paisTotales[activeVar];
     if (Number.isInteger(pt) && pt > 1000) {
       const pct = (v / pt) * 100;
@@ -338,8 +431,8 @@ function renderHist(ind) {
 function renderExtras(ind) {
   const extras = $("#sel-extras");
   if (!ind) { extras.innerHTML = "<p>Sin indicadores para este nivel.</p>"; return; }
-  const rows = Object.entries(ind).map(([k, v]) =>
-    `<tr><td>${labelFor(k)}</td><td>${typeof v === "number" ? fmt.format(v) : v}</td></tr>`
+  const rows = Object.entries(ind).filter(([k]) => !k.startsWith("_")).map(([k, v]) =>
+    `<tr><td>${labelFor(k)}</td><td>${typeof v === "number" ? fmtVal(v, k) : v}</td></tr>`
   ).join("");
   extras.innerHTML = `<table>${rows}</table>`;
 }
@@ -465,6 +558,39 @@ async function autoLevel() {
 
 $$("#lvl-nav button").forEach(b => b.addEventListener("click", () => setLevel(b.dataset.lvl, { fit: true })));
 
+function populateVarSelect() {
+  const ds = DATASETS[activeDataset];
+  const sel = $("#var-sel");
+  sel.innerHTML = `<option value="">— sin color —</option>` +
+    ds.vars.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  // Mantener variable si existe en este dataset; si no, default
+  const has = ds.vars.some(([k]) => k === activeVar);
+  if (!has) activeVar = ds.defaultVar;
+  sel.value = activeVar || "";
+  // Visibilidad de los botones de nivel: marcar disabled los que no aplican
+  $$("#lvl-nav button").forEach(b => {
+    const ok = ds.levels.includes(b.dataset.lvl);
+    b.disabled = !ok;
+    b.style.opacity = ok ? "" : "0.35";
+    b.title = ok ? "" : `Sin datos en ${ds.label} para este nivel`;
+  });
+}
+
+$("#ds-sel").addEventListener("change", async e => {
+  activeDataset = e.target.value;
+  populateVarSelect();
+  const ds = DATASETS[activeDataset];
+  // Si la capa activa no está soportada, saltar a la primera soportada
+  if (!ds.levels.includes(activeLevel)) {
+    await setLevel(ds.levels.includes("departamentos") ? "departamentos" : ds.levels[0], { fit: true });
+  } else {
+    await loadIndicadores(activeLevel);
+    computeStats(activeLevel);
+    restyleActive();
+  }
+  syncHash();
+});
+
 $("#var-sel").addEventListener("change", e => {
   activeVar = e.target.value || null;
   computeStats(activeLevel);
@@ -536,6 +662,7 @@ function syncHash() {
   if (suppressHashUpdate) return;
   const c = map.getCenter();
   const parts = [];
+  if (activeDataset && activeDataset !== "censo") parts.push(`ds=${activeDataset}`);
   parts.push(`l=${activeLevel}`);
   if (activeVar) parts.push(`v=${activeVar}`);
   if (selectedCode) parts.push(`c=${selectedCode}`);
@@ -548,6 +675,8 @@ async function loadHash() {
   const q = Object.fromEntries(location.hash.slice(1).split("&").map(p => p.split("=")));
   suppressHashUpdate = true;
   try {
+    if (q.ds && DATASETS[q.ds]) { activeDataset = q.ds; $("#ds-sel").value = q.ds; }
+    populateVarSelect();
     if (q.v) { activeVar = q.v; $("#var-sel").value = q.v; }
     if (q.xy && q.z) {
       const [lat, lng] = q.xy.split(",").map(Number);
@@ -666,7 +795,7 @@ async function loadPolitica() {
 
 // -- Init --
 (async () => {
-  // si hay hash, lo respetamos; si no, default país
+  populateVarSelect();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);

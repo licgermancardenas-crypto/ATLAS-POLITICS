@@ -28,16 +28,14 @@
       <ul id="search-results"></ul>
     </div>
     <div class="ramp" id="ramp">
-      <label for="var-sel">Colorear por</label>
-      <select id="var-sel">
-        <option value="">— sin color —</option>
-        <option value="personas" selected>Población</option>
-        <option value="hogares">Hogares</option>
-        <option value="viv_part_h">Viv. habitadas</option>
-        <option value="idx_masculinidad">Índ. masc.</option>
-        <option value="personas_por_hogar">Pers./hogar</option>
-        <option value="personas_por_vivienda">Pers./vivienda</option>
+      <label for="ds-sel">Dataset</label>
+      <select id="ds-sel">
+        <option value="censo" selected>Censo 2022</option>
+        <option value="2023_generales">Generales 2023</option>
+        <option value="2023_balotaje">Balotaje 2023</option>
       </select>
+      <label for="var-sel">Variable</label>
+      <select id="var-sel"></select>
     </div>
     <div class="status" id="status">Cargando…</div>
   </header>
