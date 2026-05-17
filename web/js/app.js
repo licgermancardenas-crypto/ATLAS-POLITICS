@@ -602,6 +602,7 @@ $("#var-sel").addEventListener("change", e => {
 function switchTab(name) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   $$(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
+  if (name === "cruce") renderCruce();
 }
 $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
 
@@ -793,9 +794,155 @@ async function loadPolitica() {
   } catch { $("#blk-diputados").innerHTML = `<h3>Diputados</h3><div class="loading">Error</div>`; }
 }
 
+// -- Cruce censo ↔ electoral --
+function populateCruceSelects() {
+  const x = $("#cruce-x"), y = $("#cruce-y");
+  // X = variables censo (sin "viv_part" "varones" "mujeres" — usar las derivadas/principales)
+  const censoVars = [
+    ["personas", "Población"],
+    ["hogares", "Hogares"],
+    ["viv_part_h", "Viv. habitadas"],
+    ["idx_masculinidad", "Índ. masculinidad"],
+    ["personas_por_hogar", "Personas/hogar"],
+    ["personas_por_vivienda", "Personas/vivienda"],
+  ];
+  x.innerHTML = censoVars.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  refreshCruceY();
+  x.value = "personas_por_hogar"; // default interesante (correlaciona con nivel socioeconómico)
+}
+function refreshCruceY() {
+  const ds = $("#cruce-ds").value;
+  const y = $("#cruce-y");
+  y.innerHTML = DATASETS[ds].vars.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  y.value = "lla_pct";
+}
+
+function pearsonR(pairs) {
+  if (pairs.length < 3) return null;
+  const n = pairs.length;
+  let sx=0, sy=0, sxx=0, syy=0, sxy=0;
+  for (const [x, y] of pairs) {
+    sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y;
+  }
+  const num = n*sxy - sx*sy;
+  const den = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
+  return den ? num / den : null;
+}
+
+async function renderCruce() {
+  const xVar = $("#cruce-x").value;
+  const yVar = $("#cruce-y").value;
+  const ds = $("#cruce-ds").value;
+  const xData = await loadIndicadores("departamentos", "censo");
+  const yData = await loadIndicadores("departamentos", ds);
+  if (!xData || !yData) return;
+
+  // Lookup nombres por código depto desde la capa departamentos
+  const layer = layerCache.departamentos;
+  const nameByCode = {};
+  if (layer) layer.eachLayer(l => {
+    const p = l.feature?.properties;
+    if (p?.codigo_indec) nameByCode[p.codigo_indec] = { nombre: p.nombre, prov: p.provincia };
+  });
+
+  // Construir pares (solo los que tengan ambas variables)
+  const points = [];
+  for (const [code, ind] of Object.entries(yData)) {
+    const xv = xData[code]?.[xVar];
+    const yv = ind?.[yVar];
+    if (xv == null || yv == null || !isFinite(xv) || !isFinite(yv)) continue;
+    points.push({ code, x: xv, y: yv, nombre: nameByCode[code]?.nombre || code });
+  }
+  const r = pearsonR(points.map(p => [p.x, p.y]));
+  const rabs = r == null ? null : Math.abs(r);
+  const rClass = r == null ? "weak" : (rabs >= 0.5 ? "strong" : (rabs >= 0.3 ? "" : "weak"));
+  $("#cruce-stats").innerHTML = `
+    <span>${points.length} deptos</span>
+    <span>Pearson R: <span class="r ${rClass}">${r == null ? "—" : r.toFixed(3)}</span></span>
+    <span>R²: <span class="r ${rClass}">${r == null ? "—" : (r*r).toFixed(3)}</span></span>
+  `;
+
+  // SVG render
+  const W = 340, H = 240, m = { l: 40, r: 10, t: 10, b: 30 };
+  const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const xRange = xmax - xmin || 1, yRange = ymax - ymin || 1;
+  const sx = (v) => m.l + ((v - xmin) / xRange) * innerW;
+  const sy = (v) => m.t + innerH - ((v - ymin) / yRange) * innerH;
+  // Ticks
+  const xt = [xmin, xmin + xRange/2, xmax];
+  const yt = [ymin, ymin + yRange/2, ymax];
+  const fmtTick = (v, isPct) => isPct ? `${(v*100).toFixed(0)}%` : (Math.abs(v) >= 1000 ? fmt.format(Math.round(v)) : v.toFixed(1));
+  const xPct = isPctVar(xVar), yPct = isPctVar(yVar);
+  // Línea de regresión simple
+  let fitLine = "";
+  if (r != null && points.length >= 3) {
+    const meanX = xs.reduce((a,b)=>a+b)/xs.length;
+    const meanY = ys.reduce((a,b)=>a+b)/ys.length;
+    const slope = points.reduce((s,p) => s + (p.x - meanX)*(p.y - meanY), 0) /
+                  points.reduce((s,p) => s + (p.x - meanX)**2, 0);
+    const inter = meanY - slope*meanX;
+    const y1 = slope*xmin + inter, y2 = slope*xmax + inter;
+    fitLine = `<line class="fit" x1="${sx(xmin)}" y1="${sy(y1)}" x2="${sx(xmax)}" y2="${sy(y2)}" />`;
+  }
+
+  const dots = points.map(p => `
+    <circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="3" fill="#5aa3ff" fill-opacity="0.55"
+      stroke="${p.code === selectedCode ? '#fff' : 'none'}"
+      class="${p.code === selectedCode ? 'sel' : ''}"
+      data-code="${p.code}" data-name="${p.nombre}"></circle>
+  `).join("");
+
+  $("#cruce-svg").innerHTML = `
+    <line class="ax" x1="${m.l}" y1="${m.t+innerH}" x2="${m.l+innerW}" y2="${m.t+innerH}" />
+    <line class="ax" x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+innerH}" />
+    ${xt.map(v => `<text class="ax-text" x="${sx(v)}" y="${m.t+innerH+12}" text-anchor="middle">${fmtTick(v, xPct)}</text>`).join("")}
+    ${yt.map(v => `<text class="ax-text" x="${m.l-4}" y="${sy(v)+3}" text-anchor="end">${fmtTick(v, yPct)}</text>`).join("")}
+    <text class="ax-text" x="${m.l+innerW/2}" y="${H-4}" text-anchor="middle">${labelFor(xVar)}</text>
+    <text class="ax-text" x="0" y="${m.t+innerH/2}" transform="rotate(-90 8 ${m.t+innerH/2})" text-anchor="middle">${labelFor(yVar)}</text>
+    ${fitLine}
+    ${dots}
+  `;
+
+  // Click & hover
+  $$("#cruce-svg circle").forEach(c => {
+    c.addEventListener("mouseenter", e => {
+      const name = e.target.dataset.name;
+      const code = e.target.dataset.code;
+      const px = parseFloat(e.target.getAttribute("cx"));
+      const py = parseFloat(e.target.getAttribute("cy"));
+      const xv = xData[code]?.[xVar], yv = yData[code]?.[yVar];
+      $("#cruce-hover").textContent = `${name} · ${labelFor(xVar)}=${fmtVal(xv, xVar)} · ${labelFor(yVar)}=${fmtVal(yv, yVar)}`;
+    });
+    c.addEventListener("mouseleave", () => $("#cruce-hover").textContent = "—");
+    c.addEventListener("click", async () => {
+      // Cambiar a dataset electoral + nivel depto y zoom
+      if (activeDataset !== ds || activeLevel !== "departamentos") {
+        activeDataset = ds; $("#ds-sel").value = ds; populateVarSelect();
+        activeVar = yVar; $("#var-sel").value = yVar;
+        await setLevel("departamentos", { fit: false });
+      }
+      zoomToCode(c.dataset.code);
+      switchTab("info");
+    });
+  });
+}
+
+["change", "input"].forEach(ev => {
+  ["#cruce-x", "#cruce-y", "#cruce-ds"].forEach(s => {
+    $(s).addEventListener(ev, () => {
+      if (s === "#cruce-ds") refreshCruceY();
+      renderCruce();
+    });
+  });
+});
+
 // -- Init --
 (async () => {
   populateVarSelect();
+  populateCruceSelects();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);

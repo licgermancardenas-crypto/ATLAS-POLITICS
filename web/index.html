@@ -44,6 +44,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="info">Territorio</button>
       <button class="tab" data-tab="ranking">Ranking</button>
+      <button class="tab" data-tab="cruce">Cruce</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -58,6 +59,23 @@
       <div class="actions">
         <button id="btn-export-csv" class="mini">Exportar CSV de la capa</button>
         <button id="btn-share" class="mini">Copiar permalink</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-cruce">
+      <div class="block">
+        <h3>Cruce censo ↔ electoral</h3>
+        <div class="cruce-controls">
+          <label>X (Censo) <select id="cruce-x"></select></label>
+          <label>Y (Elección) <select id="cruce-y"></select></label>
+          <label>Elección <select id="cruce-ds">
+            <option value="2023_generales">Generales 2023</option>
+            <option value="2023_balotaje">Balotaje 2023</option>
+          </select></label>
+        </div>
+        <div class="cruce-stats" id="cruce-stats"></div>
+        <svg id="cruce-svg" viewBox="0 0 340 240" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="cruce-hover" id="cruce-hover">—</div>
       </div>
     </section>
 

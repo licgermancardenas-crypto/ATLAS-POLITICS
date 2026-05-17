@@ -131,6 +131,32 @@ a:hover{text-decoration:underline}
 }
 .mini:hover{background:var(--bg-2);border-color:var(--accent)}
 
+.cruce-controls{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;font-size:12px;color:var(--muted)}
+.cruce-controls label{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cruce-controls select{
+  background:var(--bg-2);color:var(--text);border:1px solid var(--line);
+  border-radius:5px;padding:4px 8px;font-size:12px;flex:1;
+}
+.cruce-stats{
+  display:flex;justify-content:space-between;font-size:11px;color:var(--muted);
+  padding:6px 8px;background:var(--bg-2);border:1px solid var(--line);
+  border-radius:6px;margin-bottom:8px;
+}
+.cruce-stats .r{color:var(--accent-2);font-variant-numeric:tabular-nums;font-weight:600}
+.cruce-stats .r.weak{color:var(--muted)}
+.cruce-stats .r.strong{color:var(--warn)}
+#cruce-svg{
+  width:100%;height:auto;display:block;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:6px;
+}
+#cruce-svg .ax{stroke:var(--line);stroke-width:0.5}
+#cruce-svg .ax-text{fill:var(--muted);font-size:9px;font-family:inherit}
+#cruce-svg circle{cursor:pointer;transition:r .15s}
+#cruce-svg circle:hover{r:5}
+#cruce-svg circle.sel{stroke:#fff;stroke-width:1.5}
+#cruce-svg .fit{stroke:var(--warn);stroke-width:1;stroke-dasharray:3 3;fill:none;opacity:.7}
+.cruce-hover{font-size:11px;color:var(--muted);margin-top:6px;height:14px}
+
 .rk{display:flex;flex-direction:column;gap:2px}
 .rk-row{
   display:grid;grid-template-columns:24px 1fr auto;gap:6px;align-items:center;
