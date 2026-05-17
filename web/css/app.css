@@ -106,6 +106,43 @@ a:hover{text-decoration:underline}
 }
 .kpi .v{font-size:18px;font-weight:600;color:var(--accent-2)}
 .kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+.compare{margin:10px 0;display:flex;flex-direction:column;gap:6px}
+.cmp-row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  font-size:12px;padding:6px 8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+}
+.cmp-row .lbl{color:var(--muted)}
+.cmp-row .v{font-variant-numeric:tabular-nums;font-weight:600}
+.cmp-row .delta{font-size:11px;margin-left:6px}
+.cmp-row .delta.pos{color:#7df2c6}
+.cmp-row .delta.neg{color:#ff6b6b}
+
+.hist{margin:12px 0}
+.hist-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
+.hist-bars{display:flex;align-items:flex-end;height:50px;gap:1px;padding:2px 0;border-bottom:1px solid var(--line)}
+.hist-bars span{flex:1;background:var(--accent);min-height:1px;border-radius:1px 1px 0 0;opacity:.55}
+.hist-bars span.here{background:#fff;opacity:1}
+.hist-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+
+.actions{display:flex;gap:6px;margin-top:14px}
+.mini{
+  flex:1;background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:6px;padding:6px 8px;font-size:11px;cursor:pointer;
+}
+.mini:hover{background:var(--bg-2);border-color:var(--accent)}
+
+.rk{display:flex;flex-direction:column;gap:2px}
+.rk-row{
+  display:grid;grid-template-columns:24px 1fr auto;gap:6px;align-items:center;
+  padding:5px 6px;border-radius:4px;font-size:12px;cursor:pointer;
+}
+.rk-row:hover{background:var(--bg-2)}
+.rk-row.sel{background:#1a2640}
+.rk-row .pos{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;font-size:11px}
+.rk-row .nom{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-row .ctx{color:var(--muted);font-size:10px}
+.rk-row .val{color:var(--accent-2);font-variant-numeric:tabular-nums;font-weight:600}
+
 .extras{font-size:12px;color:var(--muted)}
 .extras table{width:100%;border-collapse:collapse;margin-top:8px}
 .extras td{padding:4px 0;border-bottom:1px solid var(--line)}

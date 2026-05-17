@@ -45,6 +45,7 @@
   <aside id="side">
     <div class="tabs">
       <button class="tab active" data-tab="info">Territorio</button>
+      <button class="tab" data-tab="ranking">Ranking</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -53,7 +54,24 @@
       <h2 id="sel-name">Argentina</h2>
       <div class="sel-meta" id="sel-meta">Hacé clic en el mapa o seleccioná un nivel.</div>
       <div class="kpis" id="sel-kpis"></div>
+      <div class="compare" id="sel-compare"></div>
+      <div class="hist" id="sel-hist"></div>
       <div class="extras" id="sel-extras"></div>
+      <div class="actions">
+        <button id="btn-export-csv" class="mini">Exportar CSV de la capa</button>
+        <button id="btn-share" class="mini">Copiar permalink</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-ranking">
+      <div class="block">
+        <h3>Top 10 · <span id="rk-var">—</span></h3>
+        <div id="rk-top" class="rk"></div>
+      </div>
+      <div class="block">
+        <h3>Bottom 10</h3>
+        <div id="rk-bot" class="rk"></div>
+      </div>
     </section>
 
     <section class="panel" id="panel-economia">
