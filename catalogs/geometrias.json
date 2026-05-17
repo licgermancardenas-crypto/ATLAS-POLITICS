@@ -1,0 +1,79 @@
+[
+  {
+    "name": "departamentos",
+    "file": "data/departamentos.geojson",
+    "features": 529,
+    "size_kb": 3549,
+    "properties": [
+      "nombre",
+      "tipo",
+      "codigo_indec",
+      "fuente",
+      "provincia",
+      "codigo_provincia"
+    ]
+  },
+  {
+    "name": "gobiernos_locales",
+    "file": "data/gobiernos_locales.geojson",
+    "features": 2313,
+    "size_kb": 532,
+    "properties": [
+      "nombre",
+      "tipo",
+      "codigo_indec",
+      "provincia"
+    ]
+  },
+  {
+    "name": "localidades",
+    "file": "data/localidades.geojson",
+    "features": 3526,
+    "size_kb": 1106,
+    "properties": [
+      "codigo_indec",
+      "nombre",
+      "tipo",
+      "provincia",
+      "departamento",
+      "codigo_dpto",
+      "codigo_prov",
+      "personas"
+    ],
+    "geom_type": "Point"
+  },
+  {
+    "name": "municipios",
+    "file": "data/municipios.geojson",
+    "features": 2114,
+    "size_kb": 5201,
+    "properties": [
+      "nombre",
+      "tipo",
+      "codigo_indec",
+      "provincia",
+      "fuente"
+    ]
+  },
+  {
+    "name": "pais",
+    "file": "data/pais.geojson",
+    "features": 1,
+    "size_kb": 718,
+    "properties": [
+      "nombre",
+      "tipo"
+    ]
+  },
+  {
+    "name": "provincias",
+    "file": "data/provincias.geojson",
+    "features": 24,
+    "size_kb": 1379,
+    "properties": [
+      "nombre",
+      "tipo",
+      "codigo_indec"
+    ]
+  }
+]

@@ -1,0 +1,137 @@
+{
+  "radios_por_provincia": [
+    {
+      "codigo_prov": "06",
+      "zip": "Codgeo_Buenos_Aires_con_datos.zip",
+      "file": "data/radios/06.geojson",
+      "radios": 19577
+    },
+    {
+      "codigo_prov": "02",
+      "zip": "Codgeo_CABA_con_datos (1).zip",
+      "file": "data/radios/02.geojson",
+      "radios": 3553
+    },
+    {
+      "codigo_prov": "10",
+      "zip": "Codgeo_Catamarca_con_datos.zip",
+      "file": "data/radios/10.geojson",
+      "radios": 561
+    },
+    {
+      "codigo_prov": "22",
+      "zip": "Codgeo_Chaco_con_datos.zip",
+      "file": "data/radios/22.geojson",
+      "radios": 1483
+    },
+    {
+      "codigo_prov": "26",
+      "zip": "Codgeo_Chubut_con_datos.zip",
+      "file": "data/radios/26.geojson",
+      "radios": 753
+    },
+    {
+      "codigo_prov": "14",
+      "zip": "Codgeo_Cordoba_con_datos.zip",
+      "file": "data/radios/14.geojson",
+      "radios": 4752
+    },
+    {
+      "codigo_prov": "18",
+      "zip": "Codgeo_Corrientes_con_datos.zip",
+      "file": "data/radios/18.geojson",
+      "radios": 1632
+    },
+    {
+      "codigo_prov": "30",
+      "zip": "Codgeo_Entre_Rios_con_datos.zip",
+      "file": "data/radios/30.geojson",
+      "radios": 2673
+    },
+    {
+      "codigo_prov": "34",
+      "zip": "Codgeo_Formosa_con_datos.zip",
+      "file": "data/radios/34.geojson",
+      "radios": 773
+    },
+    {
+      "codigo_prov": "38",
+      "zip": "Codgeo_Jujuy_con_datos.zip",
+      "file": "data/radios/38.geojson",
+      "radios": 822
+    },
+    {
+      "codigo_prov": "42",
+      "zip": "Codgeo_La_Pampa_con_datos.zip",
+      "file": "data/radios/42.geojson",
+      "radios": 769
+    },
+    {
+      "codigo_prov": "54",
+      "zip": "Codgeo_Misiones_con_datos (2).zip",
+      "file": "data/radios/54.geojson",
+      "radios": 1432
+    },
+    {
+      "codigo_prov": "58",
+      "zip": "Codgeo_Neuquen_con_datos (1).zip",
+      "file": "data/radios/58.geojson",
+      "radios": 794
+    },
+    {
+      "codigo_prov": "62",
+      "zip": "Codgeo_Rio_Negro_con_datos.zip",
+      "file": "data/radios/62.geojson",
+      "radios": 940
+    },
+    {
+      "codigo_prov": "66",
+      "zip": "Codgeo_Salta_con_datos.zip",
+      "file": "data/radios/66.geojson",
+      "radios": 1358
+    },
+    {
+      "codigo_prov": "70",
+      "zip": "Codgeo_San_Juan_con_datos.zip",
+      "file": "data/radios/70.geojson",
+      "radios": 701
+    },
+    {
+      "codigo_prov": "74",
+      "zip": "Codgeo_San_Luis_con_datos.zip",
+      "file": "data/radios/74.geojson",
+      "radios": 656
+    },
+    {
+      "codigo_prov": "78",
+      "zip": "Codgeo_Santa_Cruz_con_datos.zip",
+      "file": "data/radios/78.geojson",
+      "radios": 302
+    },
+    {
+      "codigo_prov": "82",
+      "zip": "Codgeo_Santa_Fe_con_datos.zip",
+      "file": "data/radios/82.geojson",
+      "radios": 3779
+    },
+    {
+      "codigo_prov": "86",
+      "zip": "Codgeo_Santiago_del_Estero_con_datos.zip",
+      "file": "data/radios/86.geojson",
+      "radios": 1041
+    },
+    {
+      "codigo_prov": "94",
+      "zip": "Codgeo_Tierra_del_Fuego_con_datos.zip",
+      "file": "data/radios/94.geojson",
+      "radios": 155
+    },
+    {
+      "codigo_prov": "90",
+      "zip": "Codgeo_Tucuman_con_datos.zip",
+      "file": "data/radios/90.geojson",
+      "radios": 1717
+    }
+  ],
+  "total": 50223
+}

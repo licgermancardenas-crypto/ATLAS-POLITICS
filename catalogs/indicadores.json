@@ -1,0 +1,70 @@
+{
+  "fuente": "Censo Nacional de Población, Hogares y Viviendas 2022 (INDEC)",
+  "url": "https://www.indec.gob.ar/indec/web/Nivel4-Tema-2-41-165",
+  "fecha": "2022",
+  "totales_pais": {
+    "personas": 40117096,
+    "mujeres": 20593330,
+    "varones": 19523766,
+    "hogares": 12171675,
+    "viv_part": 13812125,
+    "viv_part_h": 11317507
+  },
+  "variables": [
+    {
+      "nombre": "personas",
+      "label": "Población total",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "mujeres",
+      "label": "Mujeres",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "varones",
+      "label": "Varones",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "hogares",
+      "label": "Hogares",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "viv_part",
+      "label": "Viviendas particulares",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "viv_part_h",
+      "label": "Viviendas particulares habitadas",
+      "tipo": "conteo"
+    },
+    {
+      "nombre": "personas_por_vivienda",
+      "label": "Personas por vivienda habitada",
+      "tipo": "ratio"
+    },
+    {
+      "nombre": "personas_por_hogar",
+      "label": "Personas por hogar",
+      "tipo": "ratio"
+    },
+    {
+      "nombre": "idx_masculinidad",
+      "label": "Índice de masculinidad (varones/100 mujeres)",
+      "tipo": "indice"
+    }
+  ],
+  "niveles": {
+    "provincias": {
+      "file": "data/indicadores_provincias.json",
+      "n": 24
+    },
+    "departamentos": {
+      "file": "data/indicadores_departamentos.json",
+      "n": 527
+    }
+  }
+}

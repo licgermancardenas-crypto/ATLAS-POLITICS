@@ -1,0 +1,56 @@
+# Datos crudos pesados (no versionar)
+data/raw/
+*.zip
+*.shp
+*.dbf
+*.shx
+*.prj
+*.cpg
+*.qmd
+*.sbn
+*.sbx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.env
+.env.local
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Intermedios pesados (regenerables con scripts/01..05)
+data/processed/*.parquet
+data/processed/*.geojson
+data/processed/raw_*
+
+# Mantener el contenido web (es liviano y necesario para GitHub Pages)
+!data/web/
+
+# web/data es junction local a data/web — no versionar (se recrea con setup)
+web/data/
+
+# Mantener los gitkeep
+!**/.gitkeep

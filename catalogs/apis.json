@@ -1,0 +1,183 @@
+{
+  "version": "1.0",
+  "descripcion": "Endpoints públicos consumidos en vivo por el frontend ATLAS politics.",
+  "endpoints": [
+    {
+      "id": "ad_dolares",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Dólares (cotizaciones oficial, blue, MEP, CCL, etc.)",
+      "url": "https://api.argentinadatos.com/v1/cotizaciones/dolares",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_dolares",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_dolares.json",
+        "n": 29445
+      }
+    },
+    {
+      "id": "ad_inflacion",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Inflación mensual histórica",
+      "url": "https://api.argentinadatos.com/v1/finanzas/indices/inflacion",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_inflacion",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_inflacion.json",
+        "n": 998
+      }
+    },
+    {
+      "id": "ad_inflacion_inter",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Inflación interanual",
+      "url": "https://api.argentinadatos.com/v1/finanzas/indices/inflacionInteranual",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_inflacion_inter",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_inflacion_inter.json",
+        "n": 988
+      }
+    },
+    {
+      "id": "ad_riesgo_pais",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Riesgo país (EMBI+) histórico",
+      "url": "https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_riesgo_pais",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_riesgo_pais.json",
+        "n": 7615
+      }
+    },
+    {
+      "id": "ad_uva",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Índice UVA histórico",
+      "url": "https://api.argentinadatos.com/v1/finanzas/indices/uva",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_uva",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_uva.json",
+        "n": 3700
+      }
+    },
+    {
+      "id": "ad_feriados_actual",
+      "provider": "argentinadatos",
+      "category": "calendario",
+      "label": "Feriados del año en curso",
+      "url": "https://api.argentinadatos.com/v1/feriados",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_feriados_actual",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_feriados_actual.json",
+        "n": 19
+      }
+    },
+    {
+      "id": "ad_senadores",
+      "provider": "argentinadatos",
+      "category": "politica",
+      "label": "Senadores nacionales actuales",
+      "url": "https://api.argentinadatos.com/v1/senado/senadores",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_senadores",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_senadores.json",
+        "n": 1088
+      }
+    },
+    {
+      "id": "ad_diputados",
+      "provider": "argentinadatos",
+      "category": "politica",
+      "label": "Diputados nacionales actuales",
+      "url": "https://api.argentinadatos.com/v1/diputados/diputados",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_diputados",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_diputados.json",
+        "n": 55713
+      }
+    },
+    {
+      "id": "ad_presidentes",
+      "provider": "argentinadatos",
+      "category": "politica",
+      "label": "Presidentes argentinos (histórico)",
+      "url": "https://api.argentinadatos.com/v1/presidentes",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_presidentes",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_presidentes.json",
+        "n": 67
+      }
+    },
+    {
+      "id": "ad_plazo_fijo",
+      "provider": "argentinadatos",
+      "category": "economia",
+      "label": "Tasas de plazo fijo por banco",
+      "url": "https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo",
+      "method": "GET",
+      "shape": "array",
+      "_probe": {
+        "id": "ad_plazo_fijo",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\ad_plazo_fijo.json",
+        "n": 31
+      }
+    },
+    {
+      "id": "bcra_principales",
+      "provider": "bcra",
+      "category": "economia",
+      "label": "BCRA — Principales Variables monetarias",
+      "url": "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias",
+      "method": "GET",
+      "shape": "object",
+      "notas": "Requiere verify=False en algunos entornos (cert chain BCRA).",
+      "_probe": {
+        "id": "bcra_principales",
+        "ok": true,
+        "status": 200,
+        "sample_file": "data\\raw\\_samples_api\\bcra_principales.json",
+        "n": null
+      }
+    }
+  ]
+}
