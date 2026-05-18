@@ -20,10 +20,43 @@ const VAR_SCALES = {
   jxc:     ["#0a1828","#0e2645","#143a6b","#1b539a","#2e76c1","#5995d4","#84b3e0","#b0d0ea","#dbe7f3","#fff"],
 };
 
+// Helper para construir un dataset electoral con vars dinámicas
+const ALIAS_LABELS = {
+  pj: "% Peronismo (FPV/UC/FdT/UP)",
+  jxc: "% JxC (Cambiemos/Juntos)",
+  lla: "% LLA",
+  izq: "% FIT",
+  hacemos: "% Hacemos",
+  una: "% UNA (Massa)",
+  prog: "% Progresistas (Stolbizer)",
+  comp_fed: "% Compromiso Federal (RS)",
+  cf: "% Consenso Federal (Lavagna)",
+  nos: "% NOS (Centurión)",
+  vcv: "% Vamos con Vos (Randazzo)",
+  "1pais": "% 1País (Massa)",
+};
+function makeElectoralDS(label, slug, alianzas, year) {
+  const vars = alianzas.map(a => [`${a}_pct`, ALIAS_LABELS[a] || `% ${a}`]);
+  vars.push(["participacion", "Participación"]);
+  vars.push(["blanco_pct", "% Blanco"]);
+  vars.push(["nulo_pct", "% Nulo+Recurrido"]);
+  const defaultVar = alianzas.includes("lla") ? "lla_pct"
+    : alianzas.includes("pj") ? "pj_pct" : `${alianzas[0]}_pct`;
+  return {
+    label, year,
+    levels: ["provincias", "departamentos"],
+    fileFor: (level) => `../data/web/elecciones_${slug}_${level === "provincias" ? "provincia" : "departamento"}.json`,
+    vars,
+    defaultVar,
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+  };
+}
+
 // Catálogo de datasets/variables
 const DATASETS = {
   censo: {
     label: "Censo 2022",
+    year: 2022,
     levels: ["pais", "provincias", "departamentos", "localidades", "radios"],
     fileFor: (level) => `../data/web/indicadores_${level === "pais" ? "provincias" : level}.json`,
     vars: [
@@ -36,65 +69,16 @@ const DATASETS = {
     ],
     defaultVar: "personas",
   },
-  "2023_generales": {
-    label: "Generales 2023 · Presidente",
-    levels: ["provincias", "departamentos"],
-    fileFor: (level) => `../data/web/elecciones_2023_generales_${level === "provincias" ? "provincia" : "departamento"}.json`,
-    vars: [
-      ["lla_pct", "% LLA"],
-      ["pj_pct", "% UP (PJ)"],
-      ["jxc_pct", "% JxC"],
-      ["hacemos_pct", "% Hacemos x Nuestro País"],
-      ["izq_pct", "% FIT"],
-      ["participacion", "Participación"],
-      ["blanco_pct", "% Blanco"],
-      ["nulo_pct", "% Nulo+Recurrido"],
-    ],
-    defaultVar: "lla_pct",
-    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
-  },
-  "2023_balotaje": {
-    label: "Balotaje 2023",
-    levels: ["provincias", "departamentos"],
-    fileFor: (level) => `../data/web/elecciones_2023_balotaje_${level === "provincias" ? "provincia" : "departamento"}.json`,
-    vars: [
-      ["lla_pct", "% LLA"],
-      ["pj_pct", "% UP (PJ)"],
-      ["participacion", "Participación"],
-      ["blanco_pct", "% Blanco"],
-      ["nulo_pct", "% Nulo+Recurrido"],
-    ],
-    defaultVar: "lla_pct",
-    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : "default",
-  },
-  "2023_diputados": {
-    label: "Diputados Nac. 2023",
-    levels: ["provincias", "departamentos"],
-    fileFor: (level) => `../data/web/elecciones_2023_diputados_${level === "provincias" ? "provincia" : "departamento"}.json`,
-    vars: [
-      ["lla_pct", "% LLA"],
-      ["pj_pct", "% UP (PJ)"],
-      ["jxc_pct", "% JxC + aliados"],
-      ["hacemos_pct", "% Hacemos + aliados"],
-      ["izq_pct", "% FIT"],
-      ["participacion", "Participación"],
-    ],
-    defaultVar: "lla_pct",
-    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
-  },
-  "2023_senadores": {
-    label: "Senadores Nac. 2023 (8 prov.)",
-    levels: ["provincias", "departamentos"],
-    fileFor: (level) => `../data/web/elecciones_2023_senadores_${level === "provincias" ? "provincia" : "departamento"}.json`,
-    vars: [
-      ["lla_pct", "% LLA"],
-      ["pj_pct", "% UP (PJ)"],
-      ["jxc_pct", "% JxC + aliados"],
-      ["participacion", "Participación"],
-    ],
-    defaultVar: "lla_pct",
-    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
-  },
+  "2015_generales":  makeElectoralDS("Presidente 2015 · Generales", "2015_generales",  ["pj","jxc","una","prog","comp_fed","izq"], 2015),
+  "2015_balotaje":   makeElectoralDS("Presidente 2015 · Balotaje",  "2015_balotaje",   ["pj","jxc"], 2015),
+  "2017_diputados":  makeElectoralDS("Diputados Nac. 2017",          "2017_diputados",  ["jxc","pj","1pais","izq"], 2017),
+  "2019_paso":       makeElectoralDS("Presidente 2019 · PASO",       "2019_paso",       ["pj","jxc","cf","nos","izq"], 2019),
+  "2019_generales":  makeElectoralDS("Presidente 2019 · Generales",  "2019_generales",  ["pj","jxc","cf","nos","izq"], 2019),
+  "2021_diputados":  makeElectoralDS("Diputados Nac. 2021",          "2021_diputados",  ["pj","jxc","lla","izq","vcv"], 2021),
+  "2023_generales":  makeElectoralDS("Presidente 2023 · Generales",  "2023_generales",  ["lla","pj","jxc","hacemos","izq"], 2023),
+  "2023_balotaje":   makeElectoralDS("Presidente 2023 · Balotaje",   "2023_balotaje",   ["lla","pj"], 2023),
+  "2023_diputados":  makeElectoralDS("Diputados Nac. 2023",          "2023_diputados",  ["lla","pj","jxc","hacemos","izq"], 2023),
+  "2023_senadores":  makeElectoralDS("Senadores Nac. 2023 (8 prov.)", "2023_senadores", ["lla","pj","jxc","hacemos","izq"], 2023),
 };
 
 const $ = (s, c=document) => c.querySelector(s);
@@ -121,7 +105,10 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.p
 const layerCache = {};
 const radioProvCache = {};
 const radioProvLoading = new Set();
-const indicadores = { censo: {}, "2023_generales": {}, "2023_balotaje": {}, "2023_diputados": {}, "2023_senadores": {} };
+const indicadores = Object.fromEntries(["censo",
+  "2015_generales","2015_balotaje","2017_diputados",
+  "2019_paso","2019_generales","2021_diputados",
+  "2023_generales","2023_balotaje","2023_diputados","2023_senadores"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;

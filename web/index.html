@@ -31,10 +31,26 @@
       <label for="ds-sel">Dataset</label>
       <select id="ds-sel">
         <option value="censo" selected>Censo 2022</option>
-        <option value="2023_generales">Presidente · Generales 2023</option>
-        <option value="2023_balotaje">Presidente · Balotaje 2023</option>
-        <option value="2023_diputados">Diputados Nac. 2023</option>
-        <option value="2023_senadores">Senadores Nac. 2023</option>
+        <optgroup label="2015 — Scioli vs Macri">
+          <option value="2015_generales">Presidente · Generales</option>
+          <option value="2015_balotaje">Presidente · Balotaje</option>
+        </optgroup>
+        <optgroup label="2017 — Macri medio término">
+          <option value="2017_diputados">Diputados Nac.</option>
+        </optgroup>
+        <optgroup label="2019 — Fernández vs Macri">
+          <option value="2019_paso">Presidente · PASO</option>
+          <option value="2019_generales">Presidente · Generales</option>
+        </optgroup>
+        <optgroup label="2021 — Fernández medio término">
+          <option value="2021_diputados">Diputados Nac.</option>
+        </optgroup>
+        <optgroup label="2023 — Milei">
+          <option value="2023_generales">Presidente · Generales</option>
+          <option value="2023_balotaje">Presidente · Balotaje</option>
+          <option value="2023_diputados">Diputados Nac.</option>
+          <option value="2023_senadores">Senadores Nac.</option>
+        </optgroup>
       </select>
       <label for="var-sel">Variable</label>
       <select id="var-sel"></select>
@@ -71,10 +87,16 @@
           <label>X (Censo) <select id="cruce-x"></select></label>
           <label>Y (Elección) <select id="cruce-y"></select></label>
           <label>Elección <select id="cruce-ds">
-            <option value="2023_generales">Presidente Generales 2023</option>
-            <option value="2023_balotaje">Presidente Balotaje 2023</option>
-            <option value="2023_diputados">Diputados Nac. 2023</option>
-            <option value="2023_senadores">Senadores Nac. 2023</option>
+            <option value="2015_generales">2015 Pres. Generales</option>
+            <option value="2015_balotaje">2015 Pres. Balotaje</option>
+            <option value="2017_diputados">2017 Diputados</option>
+            <option value="2019_paso">2019 Pres. PASO</option>
+            <option value="2019_generales">2019 Pres. Generales</option>
+            <option value="2021_diputados">2021 Diputados</option>
+            <option value="2023_generales" selected>2023 Pres. Generales</option>
+            <option value="2023_balotaje">2023 Pres. Balotaje</option>
+            <option value="2023_diputados">2023 Diputados</option>
+            <option value="2023_senadores">2023 Senadores</option>
           </select></label>
         </div>
         <div class="cruce-stats" id="cruce-stats"></div>

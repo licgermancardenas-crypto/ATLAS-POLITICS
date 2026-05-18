@@ -52,24 +52,24 @@ Por provincia, departamento, localidad y radio:
 - `hogares`, `viv_part`, `viv_part_h`
 - Derivados: `personas_por_vivienda`, `personas_por_hogar`, `idx_masculinidad`
 
-### Elecciones Generales 2023 (Presidente)
+### Histórico electoral 2015 → 2023 (10 datasets)
 
-Por provincia + departamento (matching por nombre con INDEC):
-- `lla_pct`, `pj_pct`, `jxc_pct`, `hacemos_pct`, `izq_pct`
-- `participacion`, `blanco_pct`, `nulo_pct`
-- Conteos crudos: `padron`, `votantes`, `votos_pos`, `lla`, `pj`, `jxc`, `hacemos`, `izq`
+Por provincia + departamento, matcheando por nombre con INDEC:
 
-### Balotaje 2023 (Presidente)
+| Año | Elección | Variables principales |
+|---|---|---|
+| 2015 | Presidente Generales | pj (FPV), jxc (Cambiemos), una (Massa), prog (Stolbizer), comp_fed (RS), izq (FIT) |
+| 2015 | Presidente Balotaje | pj, jxc |
+| 2017 | Diputados Nac. | jxc (Cambiemos), pj (FpV/Justicialista/UC), 1pais (Massa), izq |
+| 2019 | Presidente PASO | pj (FdT), jxc, cf (Lavagna), nos (Centurión), izq |
+| 2019 | Presidente Generales | mismo schema 2019 PASO |
+| 2021 | Diputados Nac. | pj (FdT), jxc, **lla** (primera aparición), izq, vcv (Randazzo) |
+| 2023 | Presidente Generales | lla, pj (UP), jxc, hacemos, izq |
+| 2023 | Presidente Balotaje | lla, pj |
+| 2023 | Diputados Nac. | mismo schema 2023 generales |
+| 2023 | Senadores Nac. (8 prov.) | mismo schema 2023, solo prov. que renovaron (BsAs, Formosa, Jujuy, La Rioja, Misiones, San Juan, San Luis, Santa Cruz) |
 
-Mismo schema, solo dos alianzas: `lla_pct` y `pj_pct`.
-
-### Diputados Nacionales 2023
-
-Por provincia + departamento. Variables `lla_pct`, `pj_pct`, `jxc_pct`, `hacemos_pct`, `izq_pct`, `participacion`. Las coaliciones JxC y Hacemos incluyen variantes provinciales (ej. "Encuentro por Corrientes", "Hacemos Unidos por Santa Fe") sumadas a las nacionales.
-
-### Senadores Nacionales 2023 (8 provincias)
-
-Solo se renovaron senadores en: Buenos Aires, Formosa, Jujuy, La Rioja, Misiones, San Juan, San Luis, Santa Cruz. Variables: `lla_pct`, `pj_pct`, `jxc_pct`, `participacion`. Las provincias sin datos no aparecen en el dataset.
+Todas las variables tienen su `_pct` (porcentaje sobre votos positivos) + `participacion`, `blanco_pct`, `nulo_pct`, y los conteos crudos `padron`, `votantes`, `votos_pos`, `votos_blanco`, `votos_nulo`. Las claves PJ y JxC son **estables a lo largo de los años** (suman las coaliciones equivalentes), habilitando análisis de swing temporal.
 
 ## APIs en vivo (consumidas desde el navegador)
 

@@ -1,8 +1,102 @@
 {
   "elecciones": [
     {
+      "id": "2015_generales",
+      "year": 2015,
+      "cargo": "Presidente Generales",
+      "alianzas": [
+        "pj",
+        "jxc",
+        "una",
+        "prog",
+        "comp_fed",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2015_generales_provincia.json",
+      "file_departamento": "data/elecciones_2015_generales_departamento.json",
+      "n_provincias": 23,
+      "n_departamentos": 485
+    },
+    {
+      "id": "2015_balotaje",
+      "year": 2015,
+      "cargo": "Presidente Balotaje",
+      "alianzas": [
+        "pj",
+        "jxc"
+      ],
+      "file_provincia": "data/elecciones_2015_balotaje_provincia.json",
+      "file_departamento": "data/elecciones_2015_balotaje_departamento.json",
+      "n_provincias": 23,
+      "n_departamentos": 481
+    },
+    {
+      "id": "2017_diputados",
+      "year": 2017,
+      "cargo": "Diputados Nac.",
+      "alianzas": [
+        "jxc",
+        "pj",
+        "1pais",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2017_diputados_provincia.json",
+      "file_departamento": "data/elecciones_2017_diputados_departamento.json",
+      "n_provincias": 22,
+      "n_departamentos": 471
+    },
+    {
+      "id": "2019_paso",
+      "year": 2019,
+      "cargo": "Presidente PASO",
+      "alianzas": [
+        "pj",
+        "jxc",
+        "cf",
+        "nos",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2019_paso_provincia.json",
+      "file_departamento": "data/elecciones_2019_paso_departamento.json",
+      "n_provincias": 23,
+      "n_departamentos": 490
+    },
+    {
+      "id": "2019_generales",
+      "year": 2019,
+      "cargo": "Presidente Generales",
+      "alianzas": [
+        "pj",
+        "jxc",
+        "cf",
+        "nos",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2019_generales_provincia.json",
+      "file_departamento": "data/elecciones_2019_generales_departamento.json",
+      "n_provincias": 23,
+      "n_departamentos": 492
+    },
+    {
+      "id": "2021_diputados",
+      "year": 2021,
+      "cargo": "Diputados Nac.",
+      "alianzas": [
+        "pj",
+        "jxc",
+        "lla",
+        "izq",
+        "vcv"
+      ],
+      "file_provincia": "data/elecciones_2021_diputados_provincia.json",
+      "file_departamento": "data/elecciones_2021_diputados_departamento.json",
+      "n_provincias": 24,
+      "n_departamentos": 521
+    },
+    {
       "id": "2023_generales",
-      "cargo": "PRESIDENTE",
+      "year": 2023,
+      "cargo": "Presidente Generales",
       "alianzas": [
         "lla",
         "pj",
@@ -17,7 +111,8 @@
     },
     {
       "id": "2023_balotaje",
-      "cargo": "PRESIDENTE",
+      "year": 2023,
+      "cargo": "Balotaje",
       "alianzas": [
         "lla",
         "pj"
@@ -29,7 +124,8 @@
     },
     {
       "id": "2023_diputados",
-      "cargo": "DIPUTADO NACIONAL",
+      "year": 2023,
+      "cargo": "Diputados Nac.",
       "alianzas": [
         "lla",
         "pj",
@@ -44,7 +140,8 @@
     },
     {
       "id": "2023_senadores",
-      "cargo": "SENADOR NACIONAL",
+      "year": 2023,
+      "cargo": "Senadores Nac.",
       "alianzas": [
         "lla",
         "pj",

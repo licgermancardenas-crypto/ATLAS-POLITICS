@@ -1,20 +1,22 @@
-"""ETL de resultados electorales DINE — Generales 2023 + Balotaje 2023.
+"""ETL de resultados electorales DINE — 2015 → 2023.
 
 Procesa los CSVs provisorios oficiales (DINE / datos.gob.ar) y agrega a nivel
 provincia + departamento (matcheo por nombre con `data/web/departamentos.geojson`).
 
-Salidas:
-    data/web/elecciones_2023_generales_provincia.json
-    data/web/elecciones_2023_generales_departamento.json
-    data/web/elecciones_2023_balotaje_provincia.json
-    data/web/elecciones_2023_balotaje_departamento.json
-    catalogs/elecciones.json
+Genera una salida por (año, elección, cargo) con un schema unificado de variables
+para permitir comparativas temporales:
 
-Variables por área:
-    padron, votantes, participacion
-    votos_pos, votos_blanco, votos_nulo
-    blanco_pct, nulo_pct
-    {alianza}_pct  para cada fuerza catalogada
+    pj_pct  — coalición peronista (FPV/UC/FdT/UP)
+    jxc_pct — coalición Macri/Cambiemos (Cambiemos/JxC/Juntos)
+    lla_pct — La Libertad Avanza / Avanza Libertad (2021+)
+    izq_pct — FIT (presente en todos los años)
+    + alianzas específicas por año (una/prog/cf/nos/vcv, etc.)
+    + participacion, blanco_pct, nulo_pct
+
+Salidas:
+    data/web/elecciones_<label>_provincia.json
+    data/web/elecciones_<label>_departamento.json
+    catalogs/elecciones.json
 """
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ import re
 import sys
 import unicodedata
 from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 
@@ -36,19 +39,56 @@ CATALOGS = PROJECT / "catalogs"
 WEB.mkdir(parents=True, exist_ok=True)
 CATALOGS.mkdir(parents=True, exist_ok=True)
 
-ALIANZAS_GEN_2023 = {
+# ============================================================================
+# Diccionarios de alianzas por elección
+# El matching usa substring (case-insensitive, strip whitespace).
+# ============================================================================
+ALIANZAS_2015_GEN = {
+    "pj":       ["ALIANZA FRENTE PARA LA VICTORIA"],
+    "jxc":      ["ALIANZA CAMBIEMOS"],
+    "una":      ["ALIANZA UNIDOS POR UNA NUEVA ALTERNATIVA"],
+    "prog":     ["ALIANZA PROGRESISTAS"],
+    "comp_fed": ["ALIANZA COMPROMISO FEDERAL"],
+    "izq":      ["ALIANZA FRENTE DE IZQUIERDA"],
+}
+ALIANZAS_2015_BAL = {
+    "pj":  ["ALIANZA FRENTE PARA LA VICTORIA"],
+    "jxc": ["ALIANZA CAMBIEMOS"],
+}
+ALIANZAS_2017 = {
+    "jxc":   ["CAMBIEMOS"],
+    "pj":    ["FRENTE PARA LA VICTORIA", "FRENTE JUSTICIALISTA",
+              "UNIDAD CIUDADANA"],
+    "1pais": ["1PAIS", "FRENTE RENOVADOR"],
+    "izq":   ["FRENTE DE IZQUIERDA"],
+}
+ALIANZAS_2019 = {
+    "pj":  ["FRENTE DE TODOS"],
+    "jxc": ["JUNTOS POR EL CAMBIO"],
+    "cf":  ["CONSENSO FEDERAL", "CONSENSO 2030"],
+    "nos": ["FRENTE NOS"],
+    "izq": ["FRENTE DE IZQUIERDA"],
+}
+ALIANZAS_2021 = {
+    "pj":  ["FRENTE DE TODOS"],
+    "jxc": ["JUNTOS POR EL CAMBIO", "JUNTOS POR ENTRE RIOS",
+            "ENCUENTRO POR CORRIENTES"],
+    "lla": ["LA LIBERTAD AVANZA", "AVANZA LIBERTAD"],
+    "izq": ["FRENTE DE IZQUIERDA"],
+    "vcv": ["VAMOS CON VOS"],
+}
+ALIANZAS_2023 = {
     "lla":     ["LA LIBERTAD AVANZA"],
     "pj":      ["UNION POR LA PATRIA", "UNIÓN POR LA PATRIA"],
     "jxc":     ["JUNTOS POR EL CAMBIO"],
     "hacemos": ["HACEMOS POR NUESTRO PAIS", "HACEMOS POR NUESTRO PAÍS"],
     "izq":     ["FRENTE DE IZQUIERDA Y DE TRABAJADORES - UNIDAD"],
 }
-ALIANZAS_BAL_2023 = {
+ALIANZAS_2023_BAL = {
     "lla": ["LA LIBERTAD AVANZA"],
     "pj":  ["UNION POR LA PATRIA", "UNIÓN POR LA PATRIA"],
 }
-# Para diputados/senadores hay variantes provinciales — agregamos algunos sinónimos
-ALIANZAS_LEGIS_2023 = {
+ALIANZAS_2023_LEGIS = {
     "lla":     ["LA LIBERTAD AVANZA"],
     "pj":      ["UNION POR LA PATRIA", "UNIÓN POR LA PATRIA", "FRENTE DE TODOS"],
     "jxc":     ["JUNTOS POR EL CAMBIO", "JUNTOS POR ENTRE RIOS",
@@ -60,7 +100,6 @@ ALIANZAS_LEGIS_2023 = {
 }
 
 VOTO_TIPOS = ["POSITIVO", "BLANCO", "NULO", "RECURRIDO", "IMPUGNADO", "COMANDO"]
-
 
 PREFIXES = (
     r"^provincia_de(_|l_)?",
@@ -75,10 +114,9 @@ def slug(s: str) -> str:
     s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
     s = re.sub(r"[^a-z0-9]+", "_", s.lower()).strip("_")
     s = PREFIX_RE.sub("", s).lstrip("_")
-    # Normalizar Comuna NN → Comuna N (sin padding)
-    m = re.match(r"^comuna_(\d+)$", s)
+    m = re.match(r"^comuna_0*(\d+)$", s)
     if m:
-        s = f"comuna_{int(m.group(1))}"
+        s = f"comuna_{m.group(1)}"
     return s
 
 
@@ -87,18 +125,18 @@ def vec_slug(series: pd.Series) -> pd.Series:
     s = s.str.normalize("NFKD").str.encode("ascii", errors="ignore").str.decode("ascii")
     s = s.str.lower().str.replace(r"[^a-z0-9]+", "_", regex=True).str.strip("_")
     s = s.str.replace(PREFIX_RE, "", regex=True).str.lstrip("_")
-    # Comuna NN → Comuna N
     s = s.str.replace(r"^comuna_0*(\d+)$", r"comuna_\1", regex=True)
     return s
 
 
-def alianza_mapper(alianzas: dict[str, list[str]]):
-    """Devuelve un dict literal_match→alianza (case-insensitive)."""
-    direct = {}
-    for k, aliases in alianzas.items():
-        for a in aliases:
-            direct[a.upper()] = k
-    return direct
+def alianza_for(nombre: str, mapping: dict[str, list[str]]) -> str | None:
+    n = (nombre or "").upper().strip()
+    if not n:
+        return None
+    for key, aliases in mapping.items():
+        if any(a in n for a in aliases):
+            return key
+    return None
 
 
 def load_lookups() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
@@ -109,7 +147,6 @@ def load_lookups() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
         for f in prov_geo["features"] if f["properties"].get("codigo_indec")
     }
     prov_lookup = {slug(n): c for c, n in prov_by_code.items()}
-
     depto_lookup: dict[str, dict[str, str]] = {}
     for f in g["features"]:
         p = f["properties"]
@@ -117,8 +154,6 @@ def load_lookups() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
         if not cod:
             continue
         cod = str(cod).zfill(5)
-        # NOTA: el campo `provincia` del geojson de deptos tiene "IGN" (fuente).
-        # Para sacar la provincia real usamos los 2 primeros dígitos del codigo.
         prov_name = prov_by_code.get(cod[:2], "")
         ps = slug(prov_name)
         ds = slug(p.get("nombre", ""))
@@ -128,66 +163,63 @@ def load_lookups() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
     return depto_lookup, prov_lookup
 
 
-def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exact_cargo: bool = False) -> tuple[dict, dict]:
+def aggregate(
+    csv_path: Path,
+    alianzas: dict,
+    cargo_names: Iterable[str],
+    label: str,
+    encoding: str = "utf-8",
+) -> tuple[dict, dict]:
     print(f"[{label}] leyendo {csv_path.name} ({csv_path.stat().st_size/1024**2:.0f} MB)…")
     depto_lookup, prov_lookup = load_lookups()
-    alianza_map = alianza_mapper(alianzas)
     alianza_keys = list(alianzas.keys())
+    cargo_set = {c.upper() for c in cargo_names}
 
-    # Acumuladores por (prov_s, depto_s)
-    # Estructura: dict de prov_s, depto_s → dict campo→int
-    # Mantenemos también un set de mesas vistas (para no duplicar padrón)
     agg: dict[tuple[str, str], dict] = {}
+    mesa_padron_rows = []
 
-    # mesas_padron: por chunk leemos primero la sub-tabla mesa→electores
-    # y la sumamos al cierre (deduplicada).
-    # Para simplificar: el padrón lo computamos al final con un pase aparte de
-    # mesa_id únicos. Eso evita el doble conteo entre chunks.
-    mesa_padron_rows = []  # lista de DataFrames mesa-prov-depto-electores
+    USE_BASE = ["distrito_nombre", "seccion_nombre", "mesa_id", "mesa_electores",
+                "cargo_nombre", "agrupacion_nombre", "votos_tipo", "votos_cantidad"]
 
-    CHUNK = 500_000
-    USE = ["distrito_nombre", "seccion_nombre", "mesa_id", "mesa_electores",
-           "cargo_nombre", "agrupacion_nombre", "votos_tipo", "votos_cantidad"]
+    # 2019 usa "Año" en lugar de "año" en el header pero nosotros no lo usamos.
+    # Algunos CSVs vienen en latin-1 con cabecera bytes inválidos — probamos 2 encodings.
+    def reader_factory():
+        return pd.read_csv(csv_path, usecols=USE_BASE, chunksize=500_000,
+                           dtype=str, low_memory=False, encoding=encoding)
 
-    reader = pd.read_csv(csv_path, usecols=USE, chunksize=CHUNK, dtype=str, low_memory=False)
+    reader = reader_factory()
     total = 0
     for ch in reader:
-        # Filtrar cargo (exact match si se pidió, para no agarrar PROVINCIAL cuando se quiere NACIONAL)
-        cargo_col = ch["cargo_nombre"].fillna("")
-        if exact_cargo:
-            mask = cargo_col.str.upper() == cargo_filter.upper()
-        else:
-            mask = cargo_col.str.contains(cargo_filter, case=False, na=False)
+        cargo_norm = ch["cargo_nombre"].fillna("").str.upper().str.strip()
+        mask = cargo_norm.isin(cargo_set)
         ch = ch.loc[mask].copy()
         if ch.empty:
             continue
-
         ch["votos_cantidad"] = pd.to_numeric(ch["votos_cantidad"], errors="coerce").fillna(0).astype("int64")
         ch["mesa_electores"] = pd.to_numeric(ch["mesa_electores"], errors="coerce").fillna(0).astype("int64")
         ch["prov_s"] = vec_slug(ch["distrito_nombre"])
         ch["depto_s"] = vec_slug(ch["seccion_nombre"])
+        ch["agr_n"] = ch["agrupacion_nombre"].fillna("").astype(str).str.upper().str.strip()
 
-        # Mesa padrón (una fila por mesa con sus electores)
         mp = (ch[["prov_s", "depto_s", "mesa_id", "mesa_electores"]]
               .drop_duplicates(subset=["prov_s", "depto_s", "mesa_id"]))
         mesa_padron_rows.append(mp)
 
-        # Votos por tipo (agregamos por prov, depto)
-        # 1) Totales por tipo
         votos_por_tipo = (ch.groupby(["prov_s", "depto_s", "votos_tipo"])["votos_cantidad"]
                             .sum().unstack(fill_value=0))
 
-        # 2) Votos por alianza (solo POSITIVOS)
-        pos = ch[ch["votos_tipo"] == "POSITIVO"].copy()
+        pos = ch[ch["votos_tipo"] == "POSITIVO"]
         if not pos.empty:
-            pos["alianza"] = pos["agrupacion_nombre"].fillna("").str.upper().map(alianza_map).fillna("")
-            votos_por_alianza = (pos[pos["alianza"] != ""]
+            # alianza por agrupacion única → vectorizado
+            uniq = pos["agr_n"].unique()
+            mp_map = {n: alianza_for(n, alianzas) for n in uniq}
+            pos = pos.assign(alianza=pos["agr_n"].map(mp_map))
+            votos_por_alianza = (pos[pos["alianza"].notna()]
                                   .groupby(["prov_s", "depto_s", "alianza"])["votos_cantidad"]
                                   .sum().unstack(fill_value=0))
         else:
             votos_por_alianza = pd.DataFrame()
 
-        # Mergeamos en agg
         for (ps, ds) in votos_por_tipo.index:
             rec = agg.setdefault((ps, ds), {
                 **{f"votos_{t.lower()}": 0 for t in VOTO_TIPOS},
@@ -204,9 +236,9 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exa
                         rec[a] += int(a_row[a])
 
         total += len(ch)
-        print(f"  filas {total:,}  | {len(agg):,} (prov,depto) acum.")
+        if total % 2_500_000 == 0 or total < 500_000:
+            print(f"  filas {total:,}  | {len(agg):,} (prov,depto) acum.")
 
-    # Padrón final (deduplicado por mesa global)
     if mesa_padron_rows:
         padron_df = pd.concat(mesa_padron_rows, ignore_index=True)
         padron_df = padron_df.drop_duplicates(subset=["prov_s", "depto_s", "mesa_id"])
@@ -216,8 +248,7 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exa
                                        **{a: 0 for a in alianza_keys}})
             agg[(ps, ds)]["padron"] = int(val)
 
-    # Computar derivados y mapear a códigos INDEC
-    def add_derived(rec: dict, alianzas_keys: list[str]) -> dict:
+    def add_derived(rec: dict) -> dict:
         positivos = rec.get("votos_positivo", 0)
         blanco = rec.get("votos_blanco", 0)
         nulo = (rec.get("votos_nulo", 0) + rec.get("votos_recurrido", 0)
@@ -231,22 +262,19 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exa
         rec["participacion"] = round(validos / padron, 4) if padron else None
         rec["blanco_pct"] = round(blanco / validos, 4) if validos else None
         rec["nulo_pct"] = round(nulo / validos, 4) if validos else None
-        for a in alianzas_keys:
+        for a in alianza_keys:
             rec[f"{a}_pct"] = round(rec[a] / positivos, 4) if positivos else None
-        # Limpiar campos crudos para reducir peso JSON
         for t in VOTO_TIPOS:
             rec.pop(f"votos_{t.lower()}", None)
         return rec
 
     out_depto: dict[str, dict] = {}
-    out_prov_raw: dict[str, dict] = {}  # acumulador prov_s
+    out_prov_raw: dict[str, dict] = {}
     for (ps, ds), rec in agg.items():
-        rec = add_derived(rec, alianza_keys)
-        # Depto
+        rec = add_derived(rec)
         code = depto_lookup.get(ps, {}).get(ds)
         if code:
-            out_depto[code] = {k: v for k, v in rec.items() if not k.startswith("_")}
-        # Provincia acumulado: sumamos los totales crudos (recalculamos)
+            out_depto[code] = rec
         prov_rec = out_prov_raw.setdefault(ps, {"padron": 0, "votos_pos": 0,
                                                  "votos_blanco": 0, "votos_nulo": 0,
                                                  **{a: 0 for a in alianza_keys}})
@@ -276,24 +304,60 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exa
 
 
 def main() -> None:
-    CSV_GEN = RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv"
-    runs = [
-        {"label": "2023_generales", "csv": CSV_GEN,
-         "alianzas": ALIANZAS_GEN_2023, "cargo": "PRESIDENTE", "exact": False},
-        {"label": "2023_balotaje",
+    RUNS = [
+        # 2015
+        {"label": "2015_generales", "year": 2015, "cargo": "Presidente Generales",
+         "csv": RAW / "2015_Generales" / "ResultadosElectorales.csv",
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2015_GEN},
+        {"label": "2015_balotaje", "year": 2015, "cargo": "Presidente Balotaje",
+         "csv": RAW / "2015_Ballotage" / "ResultadosElectorales.csv",
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2015_BAL},
+        # 2017
+        {"label": "2017_diputados", "year": 2017, "cargo": "Diputados Nac.",
+         "csv": RAW / "2017_Generales" / "ResultadosElectorales.csv",
+         "cargos": ["DIPUTADO NACIONAL", "DIPUTADOS NACIONALES"],
+         "alianzas": ALIANZAS_2017},
+        # 2019
+        {"label": "2019_paso", "year": 2019, "cargo": "Presidente PASO",
+         "csv": RAW / "2019_PASO" / "ResultadosElectorales.csv",
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2019},
+        {"label": "2019_generales", "year": 2019, "cargo": "Presidente Generales",
+         "csv": RAW / "2019_Generales" / "ResultadosElectorales.csv",
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2019},
+        # 2021
+        {"label": "2021_diputados", "year": 2021, "cargo": "Diputados Nac.",
+         "csv": RAW / "2021_Generales" / "ResultadosElectorales.csv",
+         "cargos": ["DIPUTADO NACIONAL", "DIPUTADOS NACIONALES"],
+         "alianzas": ALIANZAS_2021},
+        # 2023
+        {"label": "2023_generales", "year": 2023, "cargo": "Presidente Generales",
+         "csv": RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv",
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2023},
+        {"label": "2023_balotaje", "year": 2023, "cargo": "Balotaje",
          "csv": RAW / "2023_segundavuelta" / "ResultadosElectorales_2023_SegundaVuelta.csv",
-         "alianzas": ALIANZAS_BAL_2023, "cargo": "PRESIDENTE", "exact": False},
-        {"label": "2023_diputados", "csv": CSV_GEN,
-         "alianzas": ALIANZAS_LEGIS_2023, "cargo": "DIPUTADO NACIONAL", "exact": True},
-        {"label": "2023_senadores", "csv": CSV_GEN,
-         "alianzas": ALIANZAS_LEGIS_2023, "cargo": "SENADOR NACIONAL", "exact": True},
+         "cargos": ["PRESIDENTE", "PRESIDENTE Y VICE"],
+         "alianzas": ALIANZAS_2023_BAL},
+        {"label": "2023_diputados", "year": 2023, "cargo": "Diputados Nac.",
+         "csv": RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv",
+         "cargos": ["DIPUTADO NACIONAL", "DIPUTADOS NACIONALES"],
+         "alianzas": ALIANZAS_2023_LEGIS},
+        {"label": "2023_senadores", "year": 2023, "cargo": "Senadores Nac.",
+         "csv": RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv",
+         "cargos": ["SENADOR NACIONAL", "SENADORES NACIONALES"],
+         "alianzas": ALIANZAS_2023_LEGIS},
     ]
+
     catalog = {"elecciones": []}
-    for run in runs:
+    for run in RUNS:
         if not run["csv"].exists():
-            print(f"  [SKIP] {run['label']}"); continue
-        prov, depto = aggregate(run["csv"], run["alianzas"], run["cargo"], run["label"],
-                                exact_cargo=run.get("exact", False))
+            print(f"  [SKIP] {run['label']}: no se encontró {run['csv']}")
+            continue
+        prov, depto = aggregate(run["csv"], run["alianzas"], run["cargos"], run["label"])
         path_prov = WEB / f"elecciones_{run['label']}_provincia.json"
         path_depto = WEB / f"elecciones_{run['label']}_departamento.json"
         path_prov.write_text(json.dumps(prov, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -302,6 +366,7 @@ def main() -> None:
         print(f"  -> {path_depto.name} ({path_depto.stat().st_size/1024:.0f} KB)")
         catalog["elecciones"].append({
             "id": run["label"],
+            "year": run["year"],
             "cargo": run["cargo"],
             "alianzas": list(run["alianzas"].keys()),
             "file_provincia": f"data/elecciones_{run['label']}_provincia.json",
@@ -309,6 +374,7 @@ def main() -> None:
             "n_provincias": len(prov),
             "n_departamentos": len(depto),
         })
+
     cat_path = CATALOGS / "elecciones.json"
     cat_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nCatálogo: {cat_path}")
