@@ -1,0 +1,12 @@
+{
+  "mortalidad_infantil": {
+    "fuente": "DEIS Ministerio de Salud (datos.salud.gob.ar)",
+    "year_actual": 2024,
+    "unidad": "por mil nacidos vivos",
+    "variables": [
+      "mortalidad_infantil",
+      "mortalidad_infantil_vs_pais",
+      "mortalidad_infantil_serie"
+    ]
+  }
+}

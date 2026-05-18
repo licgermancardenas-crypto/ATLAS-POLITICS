@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518a · labels + tooltip rico + KPIs país on load");
+console.log("[ATLAS] build 20260518b · socio (mortalidad) + plazo fijo + feriados + presidentes");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -102,6 +102,17 @@ const DATASETS = {
     ],
     defaultVar: "exportaciones_per_capita_usd",
   },
+  socio: {
+    label: "Sociales · Mortalidad Infantil",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/socio_provincia.json`,
+    vars: [
+      ["mortalidad_infantil", "Mortalidad infantil (‰)"],
+      ["mortalidad_infantil_vs_pais", "Δ vs país"],
+    ],
+    defaultVar: "mortalidad_infantil",
+  },
   // Pseudo-dataset para swing — alimentado dinámicamente
   _swing: {
     label: "Swing",
@@ -143,7 +154,7 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "economia","_swing"].map(k => [k, {}]));
+  "economia","socio","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -955,6 +966,31 @@ async function loadEconomia() {
       <div class="rate"><span class="n">Hoy (${last.fecha})</span><span class="b">${fmt.format(last.valor)} pb</span></div>
       <div class="rate"><span class="n">Δ vs ayer</span><span class="b" style="color:${delta>=0?'#ff6b6b':'#7df2c6'}">${delta>=0?'+':''}${fmt.format(delta)} pb</span></div>`;
   } catch { $("#blk-riesgo").innerHTML = `<h3>Riesgo país</h3><div class="loading">Error</div>`; }
+
+  // Plazo fijo top 6
+  try {
+    const r = await fetch("https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo");
+    const data = (await r.json()).slice(0, 6);
+    const html = data.map(d => `
+      <div class="rate"><span class="n">${(d.entidad||"").slice(0,28)}</span>
+      <span class="b">${(d.tnaClientes*100).toFixed(1)}% TNA</span></div>`).join("");
+    $("#blk-plazo").innerHTML = `<h3>Plazo fijo 30 días (top bancos)</h3>${html}`;
+  } catch { $("#blk-plazo").innerHTML = `<h3>Plazo fijo</h3><div class="loading">Error</div>`; }
+
+  // Próximos feriados
+  try {
+    const yr = new Date().getFullYear();
+    const r = await fetch(`https://api.argentinadatos.com/v1/feriados/${yr}`);
+    let data = await r.json();
+    const today = new Date().toISOString().slice(0, 10);
+    data = data.filter(d => d.fecha >= today).slice(0, 6);
+    const html = data.map(d => `
+      <div class="rate">
+        <span class="n">${d.nombre.slice(0, 30)}</span>
+        <span class="b">${d.fecha}</span>
+      </div>`).join("");
+    $("#blk-feriados").innerHTML = `<h3>Próximos feriados ${yr}</h3>${html || '<div class="loading">No quedan feriados</div>'}`;
+  } catch { $("#blk-feriados").innerHTML = `<h3>Feriados</h3><div class="loading">Error</div>`; }
 }
 
 async function loadPolitica() {
@@ -981,6 +1017,18 @@ async function loadPolitica() {
         <span class="bar" style="width:${n/max*100}%"></span><span class="val">${n}</span></div>`).join("");
     $("#blk-diputados").innerHTML = `<h3>Diputados · ${data.length} bancas</h3>${html}`;
   } catch { $("#blk-diputados").innerHTML = `<h3>Diputados</h3><div class="loading">Error</div>`; }
+
+  try {
+    const r = await fetch("https://api.argentinadatos.com/v1/presidentes");
+    const data = await r.json();
+    const recent = data.slice(-6).reverse();
+    const html = recent.map(p => `
+      <div class="rate" title="${p.partido||''}">
+        <span class="n">${p.nombre.slice(0,28)}</span>
+        <span class="b" style="color:var(--muted)">${(p.inicio||'').slice(0,4)}–${(p.fin||'').slice(0,4) || '—'}</span>
+      </div>`).join("");
+    $("#blk-presidentes").innerHTML = `<h3>Presidentes recientes</h3>${html}`;
+  } catch { $("#blk-presidentes").innerHTML = `<h3>Presidentes</h3><div class="loading">Error</div>`; }
 }
 
 // -- Cruce censo ↔ electoral --
