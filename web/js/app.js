@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518c · IPC INDEC nacional + regional + dataset por provincia");
+console.log("[ATLAS] build 20260518d · empleo EPH + salud REFES + educación + pobreza panel");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -126,6 +126,46 @@ const DATASETS = {
     ],
     defaultVar: "ipc_var_interanual",
   },
+  empleo: {
+    label: "Economía · Desempleo EPH",
+    year: 2025,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/empleo_provincia.json`,
+    vars: [
+      ["desempleo", "Tasa de desempleo %"],
+      ["desempleo_vs_nacional", "Δ vs país (pp)"],
+    ],
+    defaultVar: "desempleo",
+    _wrapper: "provincias", // el JSON tiene {last_q, provincias: {...}}
+  },
+  salud: {
+    label: "Sociales · Establecimientos de salud",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/salud_provincia.json`,
+    vars: [
+      ["establecimientos_salud_total", "Establecimientos totales"],
+      ["establecimientos_por_10k_hab", "Establecimientos por 10k hab"],
+      ["hospitales_count", "Hospitales / clínicas / sanatorios"],
+      ["hospitales_por_100k_hab", "Hospitales por 100k hab"],
+      ["salas_count", "Salas / CAPS"],
+    ],
+    defaultVar: "establecimientos_por_10k_hab",
+  },
+  educacion: {
+    label: "Sociales · Educación (escuelas)",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/educacion_provincia.json`,
+    vars: [
+      ["escuelas_total", "Escuelas totales"],
+      ["escuelas_por_10k_hab", "Escuelas por 10k hab"],
+      ["pct_estatal", "% Estatales"],
+      ["escuelas_estatales", "Escuelas estatales"],
+      ["escuelas_privadas", "Escuelas privadas"],
+    ],
+    defaultVar: "escuelas_por_10k_hab",
+  },
   // Pseudo-dataset para swing — alimentado dinámicamente
   _swing: {
     label: "Swing",
@@ -167,7 +207,7 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "economia","socio","ipc","_swing"].map(k => [k, {}]));
+  "economia","socio","ipc","empleo","salud","educacion","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -266,12 +306,15 @@ async function loadIndicadores(level, ds = activeDataset) {
   if (ds === "censo" && level === "pais") return paisTotales || (paisTotales = await loadPaisTotales());
   const dsCfg = DATASETS[ds];
   if (!dsCfg || !dsCfg.levels.includes(level)) return null;
-  // Virtual datasets (swing) están pre-cargados en indicadores[ds][level]
   if (dsCfg._virtual) return indicadores[ds]?.[level] || null;
   if (indicadores[ds][level]) return indicadores[ds][level];
   try {
     const r = await fetch(dsCfg.fileFor(level));
-    if (r.ok) indicadores[ds][level] = await r.json();
+    if (r.ok) {
+      let data = await r.json();
+      if (dsCfg._wrapper) data = data[dsCfg._wrapper] || {};
+      indicadores[ds][level] = data;
+    }
   } catch {}
   return indicadores[ds][level];
 }
@@ -1022,6 +1065,22 @@ async function loadEconomia() {
     $("#blk-ipc-reg").innerHTML = `<h3>IPC INDEC por región (${data.last_date})</h3>${rows}
       <div class="meta">Base diciembre 2016 = 100</div>`;
   } catch { $("#blk-ipc-reg").innerHTML = `<h3>IPC regional</h3><div class="loading">Error</div>`; }
+
+  // Pobreza nacional EPH
+  try {
+    const r = await fetch("../data/web/pobreza_nacional.json");
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    const serie = d.serie || [];
+    const max = Math.max(...serie.map(s => s.pobres_personas), 1);
+    const bars = serie.map(s => `<span title="${s.fecha}: ${s.pobres_personas}%" style="height:${Math.max(2, Math.round(s.pobres_personas/max*100))}%"></span>`).join("");
+    $("#blk-pobreza").innerHTML = `<h3>Pobreza e Indigencia · EPH (${d.last_date})</h3>
+      <div class="rate"><span class="n">Pobres (personas)</span><span class="b">${d.pobres_personas.toFixed(1)}%</span></div>
+      <div class="rate"><span class="n">Pobres (hogares)</span><span class="b">${d.pobres_hogares.toFixed(1)}%</span></div>
+      <div class="rate"><span class="n">Indigentes (personas)</span><span class="b">${d.indigentes_poblacion.toFixed(1)}%</span></div>
+      <div class="spark">${bars}</div>
+      <div class="meta">Serie últimos ${serie.length} períodos</div>`;
+  } catch { $("#blk-pobreza").innerHTML = `<h3>Pobreza</h3><div class="loading">Error</div>`; }
 }
 
 async function loadPolitica() {
