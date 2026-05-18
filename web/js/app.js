@@ -1,7 +1,5 @@
-// ATLAS politics — frontend
-// Capas: pais, provincias, departamentos, municipios, localidades, radios.
-// Choropleth dinámico, búsqueda, panel info + ranking + comparativa + histograma,
-// permalink y export CSV. APIs economía/política en vivo.
+// ATLAS politics — frontend  (build 20260518a)
+console.log("[ATLAS] build 20260518a · labels + tooltip rico + KPIs país on load");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
