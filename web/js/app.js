@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518h · trade flows + vacuna COVID + datasets totales: 22");
+console.log("[ATLAS] build 20260518i · PBA histórico electoral 2011-2023 + sparkline multi-serie");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -178,6 +178,23 @@ const DATASETS = {
     ],
     defaultVar: "covid_dosis_por_hab",
   },
+  pba_elec: {
+    label: "PBA · Histórico electoral 2011-2023",
+    year: 2023,
+    levels: ["departamentos", "municipios"],
+    fileFor: () => `../data/web/pba_elecciones_municipal.json`,
+    vars: [
+      ["pba_pres_pj_last_pct", "% Peronismo último Pres."],
+      ["pba_pres_jxc_last_pct", "% JxC último Pres."],
+      ["pba_pres_lla_last_pct", "% LLA último Pres."],
+      ["pba_pres_hacemos_last_pct", "% Hacemos último Pres."],
+      ["pba_pres_izq_last_pct", "% FIT último Pres."],
+    ],
+    defaultVar: "pba_pres_lla_last_pct",
+    paletteFor: (v) => v === "pba_pres_lla_last_pct" ? "lla"
+      : v === "pba_pres_pj_last_pct" ? "pj"
+      : v === "pba_pres_jxc_last_pct" ? "jxc" : "default",
+  },
   pba: {
     label: "PBA · Municipios",
     year: 2025,
@@ -279,7 +296,7 @@ const indicadores = Object.fromEntries(["censo",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
-  "pba","caba","trade","covid","_swing"].map(k => [k, {}]));
+  "pba","caba","trade","covid","pba_elec","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -764,44 +781,64 @@ function renderExtras(ind) {
   extras.innerHTML = `<table>${rows}</table>`;
 }
 
-function renderSpark(ind) {
-  const wrap = $("#sel-spark");
-  if (!ind) { wrap.innerHTML = ""; return; }
-  // Buscar primer campo que sea array de [año, valor] o de {fecha, valor}
-  const serieKey = Object.keys(ind).find(k => k.endsWith("_serie") || k.endsWith("_serie_1ra") || k.endsWith("_serie_12m"));
-  if (!serieKey) { wrap.innerHTML = ""; return; }
-  let serie = ind[serieKey];
-  if (!Array.isArray(serie) || !serie.length) { wrap.innerHTML = ""; return; }
-  // Normalizar a [{x, y}]
-  const points = serie.map(p => {
+function normalizeSerie(s) {
+  if (!Array.isArray(s) || !s.length) return null;
+  return s.map(p => {
     if (Array.isArray(p)) return { x: String(p[0]), y: +p[1] };
     if (typeof p === "object") return { x: p.fecha || p.year || "", y: +(p.valor ?? p.value ?? 0) };
     return null;
   }).filter(p => p && isFinite(p.y));
-  if (points.length < 2) { wrap.innerHTML = ""; return; }
-  const W = 320, H = 50, m = { l: 4, r: 4, t: 4, b: 4 };
-  const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
-  const ys = points.map(p => p.y);
-  const mn = Math.min(...ys), mx = Math.max(...ys), range = mx - mn || 1;
-  const sx = i => m.l + (i / (points.length - 1)) * innerW;
-  const sy = v => m.t + innerH - ((v - mn) / range) * innerH;
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${sx(i).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+}
+
+function renderSpark(ind) {
+  const wrap = $("#sel-spark");
+  if (!ind) { wrap.innerHTML = ""; return; }
+  // Multi-serie PBA electoral: detectar todos los pba_pres_serie_<key>
+  const pbaSeries = Object.entries(ind).filter(([k, v]) => k.startsWith("pba_pres_serie_") && Array.isArray(v));
+  if (pbaSeries.length >= 2) {
+    return renderMultiSpark(pbaSeries.map(([k, v]) => ({
+      label: k.replace("pba_pres_serie_", ""), points: normalizeSerie(v),
+    })), "Histórico Presidente PBA");
+  }
+  const serieKey = Object.keys(ind).find(k =>
+    (k.endsWith("_serie") || k.endsWith("_serie_1ra") || k.endsWith("_serie_12m")) && Array.isArray(ind[k]));
+  if (!serieKey) { wrap.innerHTML = ""; return; }
+  const points = normalizeSerie(ind[serieKey]);
+  if (!points || points.length < 2) { wrap.innerHTML = ""; return; }
   const titleMap = {
     mortalidad_infantil_serie: "Mortalidad infantil (serie histórica)",
     vacuna_srp_serie_1ra: "Cobertura SRP 1ra dosis (anual)",
     ipc_serie_12m: "IPC últimos 12 meses",
   };
-  const title = titleMap[serieKey] || serieKey.replace(/_/g, " ");
+  return renderMultiSpark([{ label: "", points }], titleMap[serieKey] || serieKey.replace(/_/g, " "));
+}
+
+function renderMultiSpark(series, title) {
+  const wrap = $("#sel-spark");
+  const palette = { pj: "#ff6b6b", jxc: "#5aa3ff", lla: "#b288e8", izq: "#fceabb", hacemos: "#7df2c6", una_massa: "#ffb454", "": "#5aa3ff" };
+  const W = 320, H = 60, m = { l: 4, r: 4, t: 4, b: 4 };
+  const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
+  // Eje X común
+  const allX = [...new Set(series.flatMap(s => s.points.map(p => p.x)))].sort();
+  const allY = series.flatMap(s => s.points.map(p => p.y));
+  const mn = Math.min(...allY), mx = Math.max(...allY), range = mx - mn || 1;
+  const sx = x => m.l + (allX.indexOf(x) / Math.max(1, allX.length - 1)) * innerW;
+  const sy = v => m.t + innerH - ((v - mn) / range) * innerH;
+  const paths = series.map(s => {
+    const d = s.points.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+    const color = palette[s.label] || "#5aa3ff";
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="1.4"/>`;
+  }).join("");
+  const legend = series.length > 1
+    ? series.map(s => `<span style="color:${palette[s.label] || '#5aa3ff'};margin-right:8px">${s.label.toUpperCase()}</span>`).join("")
+    : "";
   wrap.innerHTML = `
     <div class="spark-title">${title}</div>
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      <path d="${path}" fill="none" stroke="#5aa3ff" stroke-width="1.4"/>
-      <circle cx="${sx(points.length-1)}" cy="${sy(points[points.length-1].y)}" r="2.5" fill="#7df2c6"/>
-    </svg>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${paths}</svg>
     <div class="spark-meta">
-      <span>${points[0].x}</span>
-      <span>último: ${fmtVal(points[points.length-1].y)}</span>
-      <span>${points[points.length-1].x}</span>
+      <span>${allX[0] || ""}</span>
+      <span>${legend}</span>
+      <span>${allX[allX.length-1] || ""}</span>
     </div>`;
 }
 
