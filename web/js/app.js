@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518g · sparkline panel + CABA vivienda + PBA camas críticas");
+console.log("[ATLAS] build 20260518h · trade flows + vacuna COVID + datasets totales: 22");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -152,6 +152,32 @@ const DATASETS = {
     ],
     defaultVar: "establecimientos_por_10k_hab",
   },
+  trade: {
+    label: "Economía · Trade flows 2024 (top destinos)",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/trade_provincia.json`,
+    vars: [
+      ["exportaciones_total_destinos_musd", "Exportaciones a destinos identificados (M USD)"],
+      ["destino_principal_share", "% al destino principal"],
+      ["destino_top3_concentracion", "% top-3 destinos"],
+      ["destino_principal_musd", "M USD al destino principal"],
+    ],
+    defaultVar: "destino_principal_share",
+  },
+  covid: {
+    label: "Sociales · Vacunación COVID-19",
+    year: 2026,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/covid_vac_provincia.json`,
+    vars: [
+      ["covid_dosis_por_hab", "Dosis aplicadas por habitante"],
+      ["covid_cobertura_segunda_pct", "% cobertura esquema completo"],
+      ["covid_dosis_total", "Dosis totales"],
+      ["covid_dosis_refuerzo", "Dosis de refuerzo"],
+    ],
+    defaultVar: "covid_dosis_por_hab",
+  },
   pba: {
     label: "PBA · Municipios",
     year: 2025,
@@ -253,7 +279,7 @@ const indicadores = Object.fromEntries(["censo",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
-  "pba","caba","_swing"].map(k => [k, {}]));
+  "pba","caba","trade","covid","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
