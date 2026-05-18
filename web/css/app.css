@@ -131,6 +131,9 @@ a:hover{text-decoration:underline}
 }
 .mini:hover{background:var(--bg-2);border-color:var(--accent)}
 
+.rk-row .delta{font-variant-numeric:tabular-nums}
+.rk-row .delta.pos{color:#7df2c6}
+.rk-row .delta.neg{color:#ff6b6b}
 .cruce-controls{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;font-size:12px;color:var(--muted)}
 .cruce-controls label{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cruce-controls select{

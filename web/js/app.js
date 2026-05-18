@@ -18,6 +18,8 @@ const VAR_SCALES = {
   lla:     ["#1b1730","#241d4c","#33267a","#4533a8","#6444cf","#8d63dd","#b288e8","#d3b5f1","#eedaf9","#fff"],
   pj:      ["#1f0c10","#3a1218","#5e1a23","#8a1f30","#b32540","#d12f4f","#e15e76","#ed8da0","#f5bcc8","#fff"],
   jxc:     ["#0a1828","#0e2645","#143a6b","#1b539a","#2e76c1","#5995d4","#84b3e0","#b0d0ea","#dbe7f3","#fff"],
+  // Diverging para swing: rojo (caída) → gris → verde (suba)
+  swing:   ["#7f1d1d","#b91c1c","#dc2626","#ef4444","#f87171","#9ca3af","#86efac","#4ade80","#22c55e","#15803d","#166534"],
 };
 
 // Helper para construir un dataset electoral con vars dinámicas
@@ -79,6 +81,17 @@ const DATASETS = {
   "2023_balotaje":   makeElectoralDS("Presidente 2023 · Balotaje",   "2023_balotaje",   ["lla","pj"], 2023),
   "2023_diputados":  makeElectoralDS("Diputados Nac. 2023",          "2023_diputados",  ["lla","pj","jxc","hacemos","izq"], 2023),
   "2023_senadores":  makeElectoralDS("Senadores Nac. 2023 (8 prov.)", "2023_senadores", ["lla","pj","jxc","hacemos","izq"], 2023),
+  // Pseudo-dataset para swing — alimentado dinámicamente
+  _swing: {
+    label: "Swing",
+    year: 0,
+    levels: ["departamentos"],
+    fileFor: () => null,
+    vars: [["swing", "Δ puntos %"]],
+    defaultVar: "swing",
+    paletteFor: () => "swing",
+    _virtual: true,
+  },
 };
 
 const $ = (s, c=document) => c.querySelector(s);
@@ -108,7 +121,8 @@ const radioProvLoading = new Set();
 const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
-  "2023_generales","2023_balotaje","2023_diputados","2023_senadores"].map(k => [k, {}]));
+  "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
+  "_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -171,8 +185,10 @@ function isPctVar(k) {
   if (!k) return false;
   return /_pct$/.test(k) || k === "participacion";
 }
+function isSwingVar(k) { return k === "swing"; }
 function fmtVal(v, varKey = activeVar) {
   if (v == null) return "—";
+  if (isSwingVar(varKey)) return `${v >= 0 ? "+" : ""}${(v*100).toFixed(1)} pp`;
   if (isPctVar(varKey)) return `${fmt2.format(v * 100)}%`;
   if (Math.abs(v) >= 1000) return fmt.format(Math.round(v));
   return fmt2.format(v);
@@ -205,6 +221,8 @@ async function loadIndicadores(level, ds = activeDataset) {
   if (ds === "censo" && level === "pais") return paisTotales || (paisTotales = await loadPaisTotales());
   const dsCfg = DATASETS[ds];
   if (!dsCfg || !dsCfg.levels.includes(level)) return null;
+  // Virtual datasets (swing) están pre-cargados en indicadores[ds][level]
+  if (dsCfg._virtual) return indicadores[ds]?.[level] || null;
   if (indicadores[ds][level]) return indicadores[ds][level];
   try {
     const r = await fetch(dsCfg.fileFor(level));
@@ -285,13 +303,23 @@ async function loadRadiosForProv(codProv) {
 function computeStats(level) {
   if (!activeVar) { breaks = []; levelStats = null; renderLegend(level); renderRanking(); return; }
   const indLevel = indicLevelFor(level);
-  const ind = indLevel ? indicadores[indLevel] : null;
+  const ind = indLevel ? indicadores[activeDataset]?.[indLevel] : null;
   if (!ind) { breaks = []; levelStats = null; renderLegend(level); renderRanking(); return; }
   const entries = Object.entries(ind)
     .map(([k, d]) => [k, d?.[activeVar]])
     .filter(([, v]) => v != null && isFinite(v));
   const vals = entries.map(([, v]) => v).sort((a, b) => a - b);
-  breaks = quantileBreaks(vals, VAR_SCALES.default.length);
+  // Breaks simétricos para swing (alrededor de 0)
+  if (isSwingVar(activeVar)) {
+    const m = Math.max(Math.abs(vals[0] || 0), Math.abs(vals[vals.length - 1] || 0));
+    const ramp = VAR_SCALES.swing;
+    breaks = [];
+    for (let i = 1; i < ramp.length; i++) {
+      breaks.push(-m + (i / ramp.length) * 2 * m);
+    }
+  } else {
+    breaks = quantileBreaks(vals, VAR_SCALES.default.length);
+  }
   const sum = vals.reduce((a, b) => a + b, 0);
   levelStats = {
     min: vals[0], max: vals[vals.length - 1],
@@ -355,8 +383,8 @@ async function refreshSelectedPanel(props) {
   let ind = null;
   const indLevel = indicLevelFor(selectedLevel);
   if (indLevel) {
-    if (!indicadores[indLevel]) await loadIndicadores(indLevel);
-    ind = indicadores[indLevel]?.[props.codigo_indec];
+    await loadIndicadores(indLevel);
+    ind = indicadores[activeDataset]?.[indLevel]?.[props.codigo_indec];
   } else if (selectedLevel === "pais") {
     ind = await loadIndicadores("pais");
   }
@@ -712,7 +740,7 @@ $("#btn-share").addEventListener("click", async () => {
 // -- Export CSV --
 $("#btn-export-csv").addEventListener("click", () => {
   const lvl = activeLevel === "radios" ? "radios" : activeLevel;
-  const ind = indicadores[lvl];
+  const ind = indicadores[activeDataset]?.[lvl];
   if (!ind) return alert("Sin indicadores cargados para esta capa");
   const cols = new Set();
   Object.values(ind).forEach(d => Object.keys(d).forEach(k => cols.add(k)));
@@ -954,10 +982,105 @@ async function renderCruce() {
   });
 });
 
+// -- Swing --
+function populateSwingSelects() {
+  const opts = Object.entries(DATASETS)
+    .filter(([k, ds]) => k !== "censo" && !ds._virtual)
+    .map(([k, ds]) => `<option value="${k}">${ds.label}</option>`).join("");
+  $("#swing-a").innerHTML = opts;
+  $("#swing-b").innerHTML = opts;
+  $("#swing-a").value = "2019_generales";
+  $("#swing-b").value = "2023_generales";
+  $("#swing-var").value = "pj_pct";
+}
+
+async function applySwing() {
+  const dsA = $("#swing-a").value;
+  const dsB = $("#swing-b").value;
+  const varKey = $("#swing-var").value;
+  if (!dsA || !dsB) return;
+  const [a, b] = await Promise.all([
+    loadIndicadores("departamentos", dsA),
+    loadIndicadores("departamentos", dsB),
+  ]);
+  if (!a || !b) { $("#swing-stats").innerHTML = "Datos no disponibles"; return; }
+
+  // Computar swing por código (sólo donde ambas elecciones tienen dato)
+  const swing = {};
+  for (const code of Object.keys(b)) {
+    const va = a[code]?.[varKey];
+    const vb = b[code]?.[varKey];
+    if (va == null || vb == null || !isFinite(va) || !isFinite(vb)) continue;
+    swing[code] = { swing: vb - va, _from: va, _to: vb };
+  }
+  indicadores._swing.departamentos = swing;
+
+  // Activar dataset virtual + capa departamentos
+  activeDataset = "_swing";
+  $("#ds-sel").value = "_swing"; // no existe en HTML, no problema
+  populateVarSelect();
+  activeVar = "swing";
+  await setLevel("departamentos", { fit: false });
+  computeStats("departamentos");
+  restyleActive();
+
+  // Stats panel
+  const entries = Object.entries(swing).map(([c, v]) => [c, v.swing]);
+  const vals = entries.map(([, v]) => v).sort((a, b) => a - b);
+  const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const min = vals[0], max = vals[vals.length - 1];
+  const pos = vals.filter(v => v > 0).length;
+  const neg = vals.filter(v => v < 0).length;
+  const lblA = DATASETS[dsA].label, lblB = DATASETS[dsB].label;
+  $("#swing-stats").innerHTML = `
+    <span>${entries.length} deptos</span>
+    <span>Δ media: <span class="r">${(mean*100>=0?'+':'')+(mean*100).toFixed(1)}pp</span></span>
+    <span>+${pos} / -${neg}</span>
+  `;
+
+  // Top gainers/losers
+  const sorted = [...entries].sort((a, b) => b[1] - a[1]);
+  const layer = layerCache.departamentos;
+  const nameOf = (code) => {
+    if (!layer) return code;
+    let nm = null, ctx = "";
+    layer.eachLayer(l => {
+      if (l.feature?.properties.codigo_indec === code) {
+        nm = l.feature.properties.nombre;
+        ctx = l.feature.properties.provincia || "";
+      }
+    });
+    return [nm || code, ctx];
+  };
+  const renderList = (list, label) => `
+    <h3 style="font-size:11px;color:var(--muted);text-transform:uppercase;margin:8px 0 4px">${label}</h3>
+    ${list.map(([c, v], i) => {
+      const [nm, ctx] = nameOf(c);
+      return `<div class="rk-row" data-code="${c}">
+        <span class="pos">${i + 1}</span>
+        <span class="nom" title="${nm}">${nm} <span class="ctx">${ctx}</span></span>
+        <span class="delta ${v >= 0 ? 'pos' : 'neg'}">${v >= 0 ? '+' : ''}${(v*100).toFixed(1)}pp</span>
+      </div>`;
+    }).join("")}`;
+  $("#swing-top").innerHTML = renderList(sorted.slice(0, 8), `Top suba ${lblB} vs ${lblA}`) +
+                              renderList(sorted.slice(-8).reverse(), `Top caída`);
+  $$(".rk-row", $("#panel-swing")).forEach(r => {
+    r.addEventListener("click", () => zoomToCode(r.dataset.code));
+  });
+}
+
+$("#swing-apply").addEventListener("click", applySwing);
+["change", "input"].forEach(ev => {
+  ["#swing-a", "#swing-b", "#swing-var"].forEach(s => {
+    $(s).addEventListener(ev, () => { /* sólo al click Apply para no recalcular en tipeo */ });
+  });
+});
+
 // -- Init --
 (async () => {
   populateVarSelect();
   populateCruceSelects();
+  populateSwingSelects();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);

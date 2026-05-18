@@ -63,6 +63,7 @@
       <button class="tab active" data-tab="info">Territorio</button>
       <button class="tab" data-tab="ranking">Ranking</button>
       <button class="tab" data-tab="cruce">Cruce</button>
+      <button class="tab" data-tab="swing">Swing</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -102,6 +103,26 @@
         <div class="cruce-stats" id="cruce-stats"></div>
         <svg id="cruce-svg" viewBox="0 0 340 240" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="cruce-hover" id="cruce-hover">—</div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-swing">
+      <div class="block">
+        <h3>Swing entre elecciones</h3>
+        <div class="cruce-controls">
+          <label>Elección A <select id="swing-a"></select></label>
+          <label>Elección B <select id="swing-b"></select></label>
+          <label>Coalición <select id="swing-var">
+            <option value="pj_pct">Peronismo (FpV/UC/FdT/UP)</option>
+            <option value="jxc_pct">Cambiemos / JxC</option>
+            <option value="lla_pct">La Libertad Avanza</option>
+            <option value="izq_pct">FIT</option>
+            <option value="participacion">Participación</option>
+          </select></label>
+          <button id="swing-apply" class="mini" style="margin-top:6px">Aplicar al mapa</button>
+        </div>
+        <div class="cruce-stats" id="swing-stats"></div>
+        <div class="rk" id="swing-top"></div>
       </div>
     </section>
 
