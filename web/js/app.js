@@ -282,18 +282,58 @@ function styleFeature(name, feat) {
     fillOpacity: cfg.fill, fillColor: fc || cfg.color,
   };
 }
-function tooltipText(name, p) {
+function tooltipHTML(name, p) {
   const nm = p.nombre || (name === "radios" ? `Radio ${p.codigo_indec}` : "—");
   const ind = getIndic(name, p.codigo_indec);
-  const v = ind?.[activeVar];
-  if (activeVar && v != null) return `${nm} · ${labelFor(activeVar)}: ${fmtVal(v)}`;
+  let extra = "";
+  if (ind) {
+    const keysShown = [];
+    // Variable activa primero (si la hay)
+    if (activeVar && ind[activeVar] != null) {
+      keysShown.push([activeVar, ind[activeVar]]);
+    }
+    // 2-3 stats relevantes según dataset
+    const presets = {
+      censo: ["personas", "densidad_km2", "hogares"],
+      "2023_generales": ["lla_pct", "pj_pct", "participacion"],
+      "2023_balotaje":  ["lla_pct", "pj_pct"],
+      "2023_diputados": ["lla_pct", "pj_pct", "jxc_pct"],
+      "2023_senadores": ["lla_pct", "pj_pct", "jxc_pct"],
+      "2019_generales": ["pj_pct", "jxc_pct", "participacion"],
+      "2019_paso":      ["pj_pct", "jxc_pct"],
+      "2017_diputados": ["jxc_pct", "pj_pct"],
+      "2021_diputados": ["pj_pct", "jxc_pct", "lla_pct"],
+      "2015_generales": ["pj_pct", "jxc_pct"],
+      "2015_balotaje":  ["pj_pct", "jxc_pct"],
+      economia:         ["exportaciones_total_musd", "exportaciones_per_capita_usd"],
+      _swing:           ["swing"],
+    };
+    const fallback = presets[activeDataset] || presets.censo;
+    for (const k of fallback) {
+      if (!keysShown.find(x => x[0] === k) && ind[k] != null) keysShown.push([k, ind[k]]);
+      if (keysShown.length >= 3) break;
+    }
+    extra = keysShown.map(([k, v]) =>
+      `<div class="ttip-row"><span class="ttip-k">${labelFor(k)}</span><span class="ttip-v">${fmtVal(v, k)}</span></div>`
+    ).join("");
+  }
+  return `<div class="ttip-title">${nm}</div>${extra}`;
+}
+
+function labelText(name, p) {
+  const nm = p.nombre;
+  if (!nm) return "";
+  if (name === "provincias") return nm.replace(/^Provincia de(l)? /i, "");
+  if (name === "departamentos") return nm.replace(/^(Departamento|Partido de|Comuna) /i, "");
+  if (name === "municipios") return nm.replace(/^Municipio de /i, "");
   return nm;
 }
+
 function bindFeature(name, feat, lyr, parent) {
   const p = feat.properties || {};
-  lyr.bindTooltip(() => tooltipText(name, p), { sticky: true });
+  lyr.bindTooltip(() => tooltipHTML(name, p), { sticky: true, className: "ttip-rich" });
   lyr.on("mouseover", e => {
-    $("#hover-name").textContent = tooltipText(name, p);
+    $("#hover-name").textContent = (p.nombre || `Radio ${p.codigo_indec}`);
     try { e.target.setStyle({ weight: (LEVELS[name].weight || 0.5) + 1.5, fillOpacity: Math.min(0.6, LEVELS[name].fill + 0.18) }); } catch {}
   });
   lyr.on("mouseout", e => {
@@ -301,6 +341,58 @@ function bindFeature(name, feat, lyr, parent) {
     try { parent.resetStyle(e.target); } catch {}
   });
   lyr.on("click", () => onSelect(p.nombre || `Radio ${p.codigo_indec}`, p, lyr, name));
+}
+
+// -- Labels permanentes (capa separada de markers) --
+let labelLayer = null;
+let showLabels = true;
+function labelLevelForZoom(z) {
+  if (z >= 11) return "localidades";
+  if (z >= 9)  return "municipios";
+  if (z >= 7)  return "departamentos";
+  if (z >= 5)  return "provincias";
+  return null;
+}
+function rebuildLabels() {
+  if (labelLayer) { map.removeLayer(labelLayer); labelLayer = null; }
+  if (!showLabels) return;
+  const lvl = labelLevelForZoom(map.getZoom());
+  if (!lvl || !layerCache[lvl]) return;
+  const bounds = map.getBounds();
+  const group = L.layerGroup();
+  let count = 0;
+  layerCache[lvl].eachLayer(l => {
+    if (count > 150) return; // límite anti-spam
+    const p = l.feature?.properties;
+    if (!p?.nombre) return;
+    let latlng = null;
+    try {
+      if (l.getBounds) {
+        const b = l.getBounds();
+        if (!b.intersects(bounds)) return;
+        latlng = b.getCenter();
+      } else if (l.getLatLng) {
+        latlng = l.getLatLng();
+        if (!bounds.contains(latlng)) return;
+      }
+    } catch { return; }
+    if (!latlng) return;
+    const txt = labelText(lvl, p);
+    if (!txt) return;
+    L.marker(latlng, {
+      icon: L.divIcon({ className: "lbl-perm-wrap", html: `<span class="lbl-perm">${txt}</span>` }),
+      interactive: false,
+      keyboard: false,
+    }).addTo(group);
+    count++;
+  });
+  group.addTo(map);
+  labelLayer = group;
+}
+function toggleLabels() {
+  showLabels = !showLabels;
+  $("#lbl-toggle").textContent = showLabels ? "🏷️ Nombres on" : "🏷️ Nombres off";
+  rebuildLabels();
 }
 
 async function loadRadiosForProv(codProv) {
@@ -404,12 +496,42 @@ async function refreshSelectedPanel(props) {
   if (!selected) return;
   if (!props) props = selected.feature?.properties || {};
   let ind = null;
+  const code = props.codigo_indec;
   const indLevel = indicLevelFor(selectedLevel);
+  // 1) Intenta dataset activo en el nivel actual
   if (indLevel) {
     await loadIndicadores(indLevel);
-    ind = indicadores[activeDataset]?.[indLevel]?.[props.codigo_indec];
+    ind = indicadores[activeDataset]?.[indLevel]?.[code];
   } else if (selectedLevel === "pais") {
     ind = await loadIndicadores("pais");
+  }
+  // 2) Fallback: si el dataset activo no tiene data para este nivel, mostrar Censo
+  if (!ind && selectedLevel !== "pais") {
+    const censoLvl = ["provincias","departamentos","localidades","radios"].includes(selectedLevel)
+      ? selectedLevel : null;
+    if (censoLvl) {
+      await loadIndicadores(censoLvl, "censo");
+      ind = indicadores.censo?.[censoLvl]?.[code];
+    }
+  }
+  // 3) Fallback adicional para municipios → buscar match en deptos por nombre
+  if (!ind && selectedLevel === "municipios") {
+    await loadIndicadores("departamentos", "censo");
+    const di = indicadores.censo?.departamentos;
+    if (di && props.nombre) {
+      const nm = props.nombre.toLowerCase();
+      const layer = layerCache.departamentos;
+      if (layer) {
+        layer.eachLayer(l => {
+          if (ind) return;
+          const dn = (l.feature?.properties?.nombre || "").toLowerCase();
+          if (dn.includes(nm) || nm.includes(dn.replace(/^(departamento|partido de) /, ""))) {
+            const dcode = l.feature.properties.codigo_indec;
+            ind = di[dcode];
+          }
+        });
+      }
+    }
   }
   renderKpis(ind);
   renderCompare(ind, props);
@@ -420,7 +542,7 @@ async function refreshSelectedPanel(props) {
 
 function renderKpis(ind) {
   const wrap = $("#sel-kpis");
-  if (!ind) { wrap.innerHTML = ""; return; }
+  if (!ind) { wrap.innerHTML = `<div style="color:var(--muted);font-size:11px;grid-column:1/-1">Sin datos del dataset activo para este nivel.</div>`; return; }
   // KPIs default por dataset
   const presets = {
     censo: [["personas","Población"],["hogares","Hogares"],["viv_part_h","Viv. habitadas"],["idx_masculinidad","Índ. masc."]],
@@ -598,10 +720,12 @@ async function setLevel(name, opts = {}) {
 }
 
 // -- Auto-zoom --
-let zoomTimer;
+let zoomTimer, labelTimer;
 map.on("zoomend moveend", () => {
   clearTimeout(zoomTimer);
   zoomTimer = setTimeout(autoLevel, 100);
+  clearTimeout(labelTimer);
+  labelTimer = setTimeout(rebuildLabels, 250);
 });
 async function autoLevel() {
   const z = map.getZoom();
@@ -1274,7 +1398,18 @@ $("#swing-apply").addEventListener("click", applySwing);
   });
 });
 
+$("#lbl-toggle").addEventListener("click", toggleLabels);
+
 // -- Init --
+async function showCountryKpis() {
+  const ind = await loadIndicadores("pais");
+  if (!ind) return;
+  $("#sel-name").textContent = "Argentina";
+  $("#sel-meta").textContent = "República Argentina · Censo 2022";
+  renderKpis(ind);
+  renderExtras(ind);
+}
+
 (async () => {
   populateVarSelect();
   populateCruceSelects();
@@ -1282,6 +1417,8 @@ $("#swing-apply").addEventListener("click", applySwing);
   populateModeloSelect();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
+  await showCountryKpis();
+  setTimeout(rebuildLabels, 800);
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);
   loadGeo("departamentos").then(() => loadIndicadores("departamentos").then(() => activeLevel === "departamentos" && computeStats(activeLevel)));
   loadGeo("municipios");

@@ -249,6 +249,32 @@ a:hover{text-decoration:underline}
   font-size:12px;padding:4px 8px;
 }
 .leaflet-tooltip:before{display:none}
+.ttip-rich{padding:8px 10px;min-width:160px}
+.ttip-rich .ttip-title{font-weight:600;color:var(--accent-2);margin-bottom:4px;font-size:13px}
+.ttip-rich .ttip-row{display:flex;justify-content:space-between;gap:8px;font-size:11px}
+.ttip-rich .ttip-k{color:var(--muted)}
+.ttip-rich .ttip-v{color:var(--text);font-variant-numeric:tabular-nums;font-weight:500}
+
+.lbl-perm-wrap{background:transparent !important;border:none !important}
+.lbl-perm{
+  display:inline-block;
+  background:rgba(11,15,26,.75);
+  color:#fff;
+  font-size:10px;font-weight:500;
+  padding:1px 5px;border-radius:2px;
+  border:1px solid rgba(255,255,255,.18);
+  white-space:nowrap;
+  pointer-events:none;
+  text-shadow:0 1px 2px rgba(0,0,0,.8);
+  transform:translate(-50%,-50%);
+  display:block;
+}
+
+.lbl-toggle{
+  background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;
+}
+.lbl-toggle:hover{border-color:var(--accent)}
 
 #botbar{
   grid-area:bot;
