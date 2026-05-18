@@ -51,6 +51,9 @@
           <option value="2023_diputados">Diputados Nac.</option>
           <option value="2023_senadores">Senadores Nac.</option>
         </optgroup>
+        <optgroup label="Economía">
+          <option value="economia">Exportaciones 2024</option>
+        </optgroup>
       </select>
       <label for="var-sel">Variable</label>
       <select id="var-sel"></select>
@@ -64,6 +67,8 @@
       <button class="tab" data-tab="ranking">Ranking</button>
       <button class="tab" data-tab="cruce">Cruce</button>
       <button class="tab" data-tab="swing">Swing</button>
+      <button class="tab" data-tab="comparar">Comparar</button>
+      <button class="tab" data-tab="modelo">Modelo</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -103,6 +108,43 @@
         <div class="cruce-stats" id="cruce-stats"></div>
         <svg id="cruce-svg" viewBox="0 0 340 240" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="cruce-hover" id="cruce-hover">—</div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-comparar">
+      <div class="block">
+        <h3>Comparador</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          Hacé click en deptos/provincias del mapa y luego presioná <b>Anclar</b>.
+          Compará hasta 4 features lado a lado.
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button id="cmp-pin" class="mini">📌 Anclar selección</button>
+          <button id="cmp-clear" class="mini">Limpiar todo</button>
+        </div>
+        <div class="cmp-grid" id="cmp-grid"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-modelo">
+      <div class="block">
+        <h3>Modelo Censo → Voto</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          Regresión lineal del % de cada coalición sobre 5 variables censales por depto.
+        </div>
+        <div class="cruce-controls">
+          <label>Elección <select id="mod-ds"></select></label>
+          <label>Variable <select id="mod-var">
+            <option value="pj_pct">Peronismo</option>
+            <option value="jxc_pct">JxC / Cambiemos</option>
+            <option value="lla_pct">LLA</option>
+            <option value="izq_pct">FIT</option>
+            <option value="participacion">Participación</option>
+          </select></label>
+          <button id="mod-fit" class="mini" style="margin-top:6px">Ajustar modelo</button>
+        </div>
+        <div class="cruce-stats" id="mod-stats"></div>
+        <div id="mod-coefs"></div>
       </div>
     </section>
 

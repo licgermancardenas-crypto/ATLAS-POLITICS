@@ -24,6 +24,9 @@ os.environ.setdefault("OGR_GEOJSON_MAX_OBJ_SIZE", "0")
 
 import geopandas as gpd
 
+# CRS proyectado para Argentina (POSGAR 2007 / Argentina 1) — metros
+CRS_PROJ = "EPSG:5347"
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -44,6 +47,15 @@ VAR_LABELS = {
     "viv_part_h": "Viviendas particulares habitadas",
 }
 
+VAR_LABELS_DERIVED = {
+    "personas_por_hogar":    "Personas por hogar",
+    "personas_por_vivienda": "Personas por vivienda habitada",
+    "idx_masculinidad":      "Índice de masculinidad",
+    "area_km2":              "Área (km²)",
+    "densidad_km2":          "Densidad poblacional (hab/km²)",
+    "hogares_por_km2":       "Densidad de hogares (hog/km²)",
+}
+
 
 def unzip(src: Path, dst: Path) -> Path:
     dst.mkdir(parents=True, exist_ok=True)
@@ -59,6 +71,16 @@ def build(level: str, zip_name: str, key_col: str, key_len: int) -> dict:
     # Normalizar claves
     gdf[key_col] = gdf[key_col].astype(str).str.zfill(key_len)
 
+    # Área por feature en km² (CRS proyectado)
+    area_km2_by_code = {}
+    try:
+        gproj = gdf.to_crs(CRS_PROJ)
+        gdf["_area_km2"] = gproj.geometry.area / 1_000_000
+        for _, r in gdf.iterrows():
+            area_km2_by_code[r[key_col]] = float(r["_area_km2"])
+    except Exception as e:
+        print(f"  WARN área: {type(e).__name__}: {e}")
+
     indicadores: dict[str, dict] = {}
     for _, r in gdf.iterrows():
         code = r[key_col]
@@ -70,6 +92,14 @@ def build(level: str, zip_name: str, key_col: str, key_len: int) -> dict:
             d["idx_masculinidad"] = round(d["varones"] / d["mujeres"] * 100, 1)
         if d.get("personas") and d.get("hogares"):
             d["personas_por_hogar"] = round(d["personas"] / d["hogares"], 2)
+        # Área + densidad
+        area = area_km2_by_code.get(code)
+        if area and area > 0:
+            d["area_km2"] = round(area, 2)
+            if d.get("personas"):
+                d["densidad_km2"] = round(d["personas"] / area, 2)
+            if d.get("hogares"):
+                d["hogares_por_km2"] = round(d["hogares"] / area, 2)
         indicadores[code] = d
 
     out = WEB / f"indicadores_{level}.json"
@@ -96,9 +126,7 @@ def write_meta(prov: dict, dpto: dict) -> None:
         "variables": [
             {"nombre": k, "label": v, "tipo": "conteo"} for k, v in VAR_LABELS.items()
         ] + [
-            {"nombre": "personas_por_vivienda", "label": "Personas por vivienda habitada", "tipo": "ratio"},
-            {"nombre": "personas_por_hogar",   "label": "Personas por hogar",              "tipo": "ratio"},
-            {"nombre": "idx_masculinidad",     "label": "Índice de masculinidad (varones/100 mujeres)", "tipo": "indice"},
+            {"nombre": k, "label": v, "tipo": "derivado"} for k, v in VAR_LABELS_DERIVED.items()
         ],
         "niveles": {
             "provincias":    {"file": "data/indicadores_provincias.json",    "n": len(prov)},

@@ -65,6 +65,9 @@ const DATASETS = {
       ["personas", "Población"],
       ["hogares", "Hogares"],
       ["viv_part_h", "Viv. habitadas"],
+      ["densidad_km2", "Densidad (hab/km²)"],
+      ["hogares_por_km2", "Densidad hogares"],
+      ["area_km2", "Área (km²)"],
       ["idx_masculinidad", "Índ. masculinidad"],
       ["personas_por_hogar", "Personas por hogar"],
       ["personas_por_vivienda", "Personas por vivienda"],
@@ -81,6 +84,26 @@ const DATASETS = {
   "2023_balotaje":   makeElectoralDS("Presidente 2023 · Balotaje",   "2023_balotaje",   ["lla","pj"], 2023),
   "2023_diputados":  makeElectoralDS("Diputados Nac. 2023",          "2023_diputados",  ["lla","pj","jxc","hacemos","izq"], 2023),
   "2023_senadores":  makeElectoralDS("Senadores Nac. 2023 (8 prov.)", "2023_senadores", ["lla","pj","jxc","hacemos","izq"], 2023),
+  economia: {
+    label: "Economía · Exportaciones 2024",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/economia_provincia.json`,
+    vars: [
+      ["exportaciones_total_musd", "Exportaciones totales (M USD)"],
+      ["exportaciones_per_capita_usd", "Exportaciones per cápita (USD)"],
+      ["exportaciones_share_pais_pct", "% del total país"],
+      ["exportaciones_pp_share", "% Productos Primarios"],
+      ["exportaciones_moa_share", "% Manuf. Agropecuarias"],
+      ["exportaciones_moi_share", "% Manuf. Industriales"],
+      ["exportaciones_cye_share", "% Combustibles y Energía"],
+      ["exportaciones_pp_musd", "PP (M USD)"],
+      ["exportaciones_moa_musd", "MOA (M USD)"],
+      ["exportaciones_moi_musd", "MOI (M USD)"],
+      ["exportaciones_cye_musd", "CyE (M USD)"],
+    ],
+    defaultVar: "exportaciones_per_capita_usd",
+  },
   // Pseudo-dataset para swing — alimentado dinámicamente
   _swing: {
     label: "Swing",
@@ -122,7 +145,7 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "_swing"].map(k => [k, {}]));
+  "economia","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -646,6 +669,7 @@ function switchTab(name) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   $$(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
   if (name === "cruce") renderCruce();
+  if (name === "comparar") renderComparar();
 }
 $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
 
@@ -982,6 +1006,180 @@ async function renderCruce() {
   });
 });
 
+// -- Comparador --
+const compared = []; // [{code, nombre, level, dataset, ind, ctx}]
+
+function pinCurrent() {
+  if (!selected || !selectedCode) { alert("Hacé click en una feature primero."); return; }
+  const ds = activeDataset;
+  const indLevel = indicLevelFor(selectedLevel);
+  const ind = indLevel ? indicadores[ds]?.[indLevel]?.[selectedCode] : null;
+  if (!ind) { alert("Sin indicadores cargados para esta capa/dataset."); return; }
+  const p = selected.feature?.properties || {};
+  if (compared.length >= 4) compared.shift();
+  compared.push({
+    code: selectedCode,
+    nombre: p.nombre || selectedCode,
+    level: selectedLevel,
+    dataset: ds,
+    ind: { ...ind },
+    ctx: p.provincia || p.departamento || "",
+  });
+  renderComparar();
+  switchTab("comparar");
+}
+
+function renderComparar() {
+  const grid = $("#cmp-grid");
+  if (!compared.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:12px">Sin features ancladas.</div>`;
+    return;
+  }
+  // Variables a mostrar: unión de todas las claves no internas en ind
+  const keys = new Set();
+  compared.forEach(c => Object.keys(c.ind).forEach(k => { if (!k.startsWith("_")) keys.add(k); }));
+  const keyArr = Array.from(keys);
+  // Para barras: max abs por variable
+  const maxByKey = {};
+  keyArr.forEach(k => {
+    const vs = compared.map(c => c.ind[k]).filter(v => typeof v === "number");
+    maxByKey[k] = Math.max(...vs.map(Math.abs), 1);
+  });
+  const header = `<thead><tr><th>Variable</th>${compared.map((c, i) => `
+    <th>${c.nombre.slice(0, 14)}<br><span style="color:var(--muted);font-weight:400;font-size:10px">${(c.dataset === "censo" ? "Censo" : (DATASETS[c.dataset]?.label || c.dataset)).slice(0, 18)}</span>
+    <span class="cmp-rm" data-i="${i}">✕</span></th>`).join("")}</tr></thead>`;
+  const body = keyArr.map(k => `<tr>
+    <td>${labelFor(k)}</td>
+    ${compared.map(c => {
+      const v = c.ind[k];
+      if (v == null) return `<td>—</td>`;
+      const pct = typeof v === "number" ? Math.abs(v) / maxByKey[k] * 100 : 0;
+      return `<td>
+        <span class="cmp-bar"><span style="width:${pct}%"></span></span>
+        ${fmtVal(v, k)}
+      </td>`;
+    }).join("")}
+  </tr>`).join("");
+  grid.innerHTML = `<table>${header}<tbody>${body}</tbody></table>`;
+  $$(".cmp-rm", grid).forEach(b => b.addEventListener("click", () => {
+    compared.splice(parseInt(b.dataset.i), 1);
+    renderComparar();
+  }));
+}
+
+$("#cmp-pin").addEventListener("click", pinCurrent);
+$("#cmp-clear").addEventListener("click", () => { compared.length = 0; renderComparar(); });
+
+// -- Modelo Censo → Voto --
+const MODEL_FEATURES = ["personas_por_hogar", "personas_por_vivienda", "idx_masculinidad", "personas", "viv_part_h"];
+
+function populateModeloSelect() {
+  const opts = Object.entries(DATASETS)
+    .filter(([k, ds]) => k !== "censo" && !ds._virtual)
+    .map(([k, ds]) => `<option value="${k}">${ds.label}</option>`).join("");
+  $("#mod-ds").innerHTML = opts;
+  $("#mod-ds").value = "2023_generales";
+  $("#mod-var").value = "lla_pct";
+}
+
+// OLS multiple lineal: y = b0 + b1 x1 + ... + bN xN
+// Vía ecuaciones normales: β = (X' X)^-1 X' y
+function olsFit(X, y) {
+  // X: array of rows (incluye 1 para intercept)
+  // y: array
+  const n = X.length, p = X[0].length;
+  // X'X
+  const XtX = Array.from({length: p}, () => Array(p).fill(0));
+  const Xty = Array(p).fill(0);
+  for (let i = 0; i < n; i++) {
+    for (let a = 0; a < p; a++) {
+      Xty[a] += X[i][a] * y[i];
+      for (let b = 0; b < p; b++) XtX[a][b] += X[i][a] * X[i][b];
+    }
+  }
+  // Solve XtX β = Xty (Gauss-Jordan elimination)
+  const M = XtX.map((row, i) => [...row, Xty[i]]);
+  for (let i = 0; i < p; i++) {
+    // pivot
+    let mx = i;
+    for (let r = i + 1; r < p; r++) if (Math.abs(M[r][i]) > Math.abs(M[mx][i])) mx = r;
+    [M[i], M[mx]] = [M[mx], M[i]];
+    const piv = M[i][i];
+    if (Math.abs(piv) < 1e-12) return null;
+    for (let j = i; j <= p; j++) M[i][j] /= piv;
+    for (let r = 0; r < p; r++) if (r !== i) {
+      const f = M[r][i];
+      for (let j = i; j <= p; j++) M[r][j] -= f * M[i][j];
+    }
+  }
+  return M.map(row => row[p]);
+}
+
+function standardize(values) {
+  const m = values.reduce((a, b) => a + b, 0) / values.length;
+  const sd = Math.sqrt(values.reduce((a, b) => a + (b - m) ** 2, 0) / values.length) || 1;
+  return { m, sd, std: values.map(v => (v - m) / sd) };
+}
+
+async function fitModelo() {
+  const ds = $("#mod-ds").value;
+  const yVar = $("#mod-var").value;
+  const censo = await loadIndicadores("departamentos", "censo");
+  const elec = await loadIndicadores("departamentos", ds);
+  if (!censo || !elec) { $("#mod-stats").innerHTML = "Datos no disponibles"; return; }
+
+  // Construir matriz de filas con todas las variables presentes
+  const codes = Object.keys(elec).filter(c => {
+    const e = elec[c], x = censo[c];
+    if (!x || e[yVar] == null || !isFinite(e[yVar])) return false;
+    return MODEL_FEATURES.every(f => x[f] != null && isFinite(x[f]));
+  });
+  if (codes.length < 30) { $("#mod-stats").innerHTML = "Pocas observaciones"; return; }
+
+  // Estandarizar X para que los coeficientes sean comparables
+  const featCols = MODEL_FEATURES.map(f => standardize(codes.map(c => censo[c][f])));
+  const y = codes.map(c => elec[c][yVar]);
+  const X = codes.map((_, i) => [1, ...featCols.map(s => s.std[i])]);
+  const beta = olsFit(X, y);
+  if (!beta) { $("#mod-stats").innerHTML = "Matriz singular"; return; }
+
+  // Predicción y R²
+  const yhat = X.map(row => row.reduce((s, v, k) => s + v * beta[k], 0));
+  const ym = y.reduce((s, v) => s + v, 0) / y.length;
+  const ssRes = y.reduce((s, v, i) => s + (v - yhat[i]) ** 2, 0);
+  const ssTot = y.reduce((s, v) => s + (v - ym) ** 2, 0);
+  const r2 = 1 - ssRes / ssTot;
+
+  $("#mod-stats").innerHTML = `
+    <span>${codes.length} deptos</span>
+    <span>R²: <span class="r">${r2.toFixed(3)}</span></span>
+    <span>Intercept: <span class="r">${(beta[0]*100).toFixed(1)}%</span></span>
+  `;
+  // Coeficientes estandarizados
+  const maxC = Math.max(...beta.slice(1).map(Math.abs));
+  const labelMap = {
+    personas_por_hogar: "Personas/hogar",
+    personas_por_vivienda: "Personas/vivienda",
+    idx_masculinidad: "Índ. masculinidad",
+    personas: "Población",
+    viv_part_h: "Viv. habitadas",
+  };
+  $("#mod-coefs").innerHTML = beta.slice(1).map((b, i) => {
+    const f = MODEL_FEATURES[i];
+    const sign = b >= 0 ? "pos" : "neg";
+    const widthPct = Math.abs(b) / maxC * 50;
+    const offset = b >= 0 ? `width:${widthPct}%;background:#7df2c6` : `width:${widthPct}%;transform:translateX(-100%);background:#ff6b6b`;
+    return `<div class="mod-row">
+      <span class="lbl">${labelMap[f] || f}</span>
+      <span class="coef ${sign}">${b >= 0 ? "+" : ""}${(b*100).toFixed(2)}pp</span>
+      <span style="font-size:10px;color:var(--muted)">β std</span>
+      <div class="bar"><span style="${offset}"></span></div>
+    </div>`;
+  }).join("");
+}
+
+$("#mod-fit").addEventListener("click", fitModelo);
+
 // -- Swing --
 function populateSwingSelects() {
   const opts = Object.entries(DATASETS)
@@ -1081,6 +1279,7 @@ $("#swing-apply").addEventListener("click", applySwing);
   populateVarSelect();
   populateCruceSelects();
   populateSwingSelects();
+  populateModeloSelect();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);

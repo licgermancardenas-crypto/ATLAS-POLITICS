@@ -42,19 +42,34 @@
       "tipo": "conteo"
     },
     {
-      "nombre": "personas_por_vivienda",
-      "label": "Personas por vivienda habitada",
-      "tipo": "ratio"
-    },
-    {
       "nombre": "personas_por_hogar",
       "label": "Personas por hogar",
-      "tipo": "ratio"
+      "tipo": "derivado"
+    },
+    {
+      "nombre": "personas_por_vivienda",
+      "label": "Personas por vivienda habitada",
+      "tipo": "derivado"
     },
     {
       "nombre": "idx_masculinidad",
-      "label": "Índice de masculinidad (varones/100 mujeres)",
-      "tipo": "indice"
+      "label": "Índice de masculinidad",
+      "tipo": "derivado"
+    },
+    {
+      "nombre": "area_km2",
+      "label": "Área (km²)",
+      "tipo": "derivado"
+    },
+    {
+      "nombre": "densidad_km2",
+      "label": "Densidad poblacional (hab/km²)",
+      "tipo": "derivado"
+    },
+    {
+      "nombre": "hogares_por_km2",
+      "label": "Densidad de hogares (hog/km²)",
+      "tipo": "derivado"
     }
   ],
   "niveles": {

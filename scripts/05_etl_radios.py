@@ -23,6 +23,8 @@ os.environ.setdefault("OGR_GEOJSON_MAX_OBJ_SIZE", "0")
 
 import geopandas as gpd
 
+CRS_PROJ = "EPSG:5347"  # POSGAR Argentina, metros
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -96,6 +98,14 @@ def process_prov(zip_name: str, cod_prov: str) -> dict:
     if g.crs and g.crs.to_epsg() != 4326:
         g = g.to_crs(4326)
 
+    # Área en km²
+    try:
+        g_proj = g.to_crs(CRS_PROJ)
+        g["_area_km2"] = g_proj.geometry.area / 1_000_000
+    except Exception as e:
+        print(f"  WARN área {cod_prov}: {e}")
+        g["_area_km2"] = None
+
     # Normalizar nombres de columnas a minúsculas para tener un schema común
     g.columns = [c if c == "geometry" else c.upper() for c in g.columns]
 
@@ -137,6 +147,13 @@ def process_prov(zip_name: str, cod_prov: str) -> dict:
             d["personas_por_vivienda"] = round(d["personas"] / d["viv_part_h"], 2)
         if d.get("mujeres") and d.get("varones"):
             d["idx_masculinidad"] = round(d["varones"] / d["mujeres"] * 100, 1)
+        if d.get("personas") and d.get("hogares"):
+            d["personas_por_hogar"] = round(d["personas"] / d["hogares"], 2)
+        area = r.get("_area_km2")
+        if area and area > 0:
+            d["area_km2"] = round(float(area), 4)
+            if d.get("personas"):
+                d["densidad_km2"] = round(d["personas"] / float(area), 1)
         indic[r["LINK"]] = d
     return indic
 

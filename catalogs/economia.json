@@ -1,0 +1,20 @@
+{
+  "exportaciones": {
+    "fuente": "SSPM - datos.gob.ar",
+    "year": 2024,
+    "file": "data/economia_provincia.json",
+    "variables": [
+      "exportaciones_total_musd",
+      "exportaciones_pp_musd",
+      "exportaciones_moa_musd",
+      "exportaciones_moi_musd",
+      "exportaciones_cye_musd",
+      "exportaciones_per_capita_usd",
+      "exportaciones_share_pais_pct",
+      "exportaciones_pp_share",
+      "exportaciones_moa_share",
+      "exportaciones_moi_share",
+      "exportaciones_cye_share"
+    ]
+  }
+}
