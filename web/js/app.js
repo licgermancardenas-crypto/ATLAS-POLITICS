@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518j · PBA Pres+Dip+Sen + producción agrícola SAGyP");
+console.log("[ATLAS] build 20260518k · egresos PBA + trade bloques económicos · 26 datasets");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -201,6 +201,37 @@ const DATASETS = {
       : /pj_last/.test(v) ? "pj"
       : /jxc_last/.test(v) ? "jxc" : "default",
   },
+  trade_bloques: {
+    label: "Economía · Exportaciones por bloque 2024",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/trade_bloques_provincia.json`,
+    vars: [
+      ["trade_bloque_principal_share", "% al bloque principal"],
+      ["trade_mercosur_share", "% Mercosur"],
+      ["trade_ue_share", "% UE"],
+      ["trade_asia_share", "% Asia"],
+      ["trade_norteamerica_share", "% Norteamérica"],
+      ["trade_chile_peru_share", "% Chile/Perú/Col/Ecu"],
+      ["trade_africa_medio_oriente_share", "% África+Medio Oriente"],
+    ],
+    defaultVar: "trade_mercosur_share",
+  },
+  egresos_pba: {
+    label: "PBA · Egresos hospitalarios 2020",
+    year: 2020,
+    levels: ["departamentos", "municipios"],
+    fileFor: () => `../data/web/egresos_pba_municipal.json`,
+    vars: [
+      ["egresos_2020_por_1k_hab", "Egresos por 1.000 hab"],
+      ["egresos_2020_total", "Egresos totales"],
+      ["egresos_2020_cardiovasculares", "Egresos cardiovasculares"],
+      ["egresos_2020_respiratorios", "Egresos respiratorios"],
+      ["egresos_2020_embarazo_parto", "Egresos embarazo/parto"],
+      ["egresos_2020_traumatismos", "Egresos traumatismos"],
+    ],
+    defaultVar: "egresos_2020_por_1k_hab",
+  },
   agro: {
     label: "Economía · Producción agrícola 2024",
     year: 2024,
@@ -319,7 +350,8 @@ const indicadores = Object.fromEntries(["censo",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
-  "pba","caba","trade","covid","pba_elec","agro","_swing"].map(k => [k, {}]));
+  "pba","caba","trade","covid","pba_elec","agro",
+  "trade_bloques","egresos_pba","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
