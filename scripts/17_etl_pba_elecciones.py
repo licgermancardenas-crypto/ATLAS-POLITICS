@@ -30,9 +30,16 @@ PROJECT = Path(r"C:/Users/corra/Desktop/ATLAS politics")
 WEB = PROJECT / "data" / "web"
 RAW = PROJECT / "data" / "raw" / "elecciones"
 
-CSV_FILES = [
+CSV_FILES_PRES = [
     RAW / "resultados-electorales-presidente-2011_2015.csv",
     RAW / "resultados-electorales-presidente-2019_2023.csv",
+]
+CSV_FILES_DIP = [
+    RAW / "resultados-electorales-diputados-2011_2015.csv",
+    RAW / "resultados-electorales-diputados-2017_2023.csv",
+]
+CSV_FILES_SEN = [
+    RAW / "senadores-pba-generales-2011-2023.csv",
 ]
 
 ALIANZAS_HIST = {
@@ -95,36 +102,33 @@ def load_pba_codes() -> dict[str, str]:
     return out
 
 
-def main() -> None:
-    code_lookup = load_pba_codes()
-    print(f"PBA municipios: {len(code_lookup)}")
-
+def process_cargo(csv_files, prefix: str, code_lookup: dict) -> dict[str, dict]:
     dfs = []
-    for f in CSV_FILES:
-        if not f.exists(): continue
-        d = pd.read_csv(f, dtype=str, low_memory=False, encoding="utf-8-sig")
-        # Normalizar nombre de la col año
+    for f in csv_files:
+        if not f.exists():
+            print(f"  [SKIP] {f.name}"); continue
+        try:
+            d = pd.read_csv(f, dtype=str, low_memory=False, encoding="utf-8-sig")
+        except UnicodeDecodeError:
+            d = pd.read_csv(f, dtype=str, low_memory=False, encoding="latin1")
         col_year = next((c for c in d.columns if c.strip().lower() in ("año", "ano")), None)
         if col_year and col_year != "year":
             d = d.rename(columns={col_year: "year"})
         dfs.append(d)
+    if not dfs: return {}
     df = pd.concat(dfs, ignore_index=True)
-    print(f"rows: {len(df):,}")
     df["votos_cantidad"] = pd.to_numeric(df["votos_cantidad"], errors="coerce").fillna(0).astype("int64")
     df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
     df["seccion_s"] = df["seccion_nombre"].astype(str).apply(slug)
     df["alianza"] = df["agrupacion_nombre"].apply(alianza_for)
+    print(f"  [{prefix}] {len(df):,} filas")
 
-    # Agregar por (year, seccion) — totales y por alianza
-    out: dict[str, dict] = {}
-    # Total positivos por sección+año (para denominator)
     pos = df[df["votos_tipo"] == "POSITIVO"]
     tot_pos = pos.groupby(["year", "seccion_s"])["votos_cantidad"].sum()
     alianza_sum = (pos.dropna(subset=["alianza"])
                       .groupby(["year", "seccion_s", "alianza"])["votos_cantidad"]
                       .sum())
 
-    # Construir series por sección
     seccion_grouped: dict[str, dict] = {}
     for (year, seccion_s, alianza), val in alianza_sum.items():
         if pd.isna(year): continue
@@ -134,28 +138,44 @@ def main() -> None:
         pct = round(val / denom * 100, 1)
         seccion_grouped.setdefault(seccion_s, {}).setdefault(alianza, []).append([year, pct])
 
-    matched = 0
+    out: dict[str, dict] = {}
     for seccion_s, by_alianza in seccion_grouped.items():
         code = code_lookup.get(seccion_s)
-        if not code:
-            continue
-        matched += 1
-        rec: dict = {}
+        if not code: continue
+        rec = out.setdefault(code, {})
         last_year = None
         for alianza, serie in by_alianza.items():
             serie = sorted(serie)
-            rec[f"pba_pres_serie_{alianza}"] = serie
+            rec[f"pba_{prefix}_serie_{alianza}"] = serie
             last = serie[-1]
-            rec[f"pba_pres_{alianza}_last_pct"] = last[1]
+            rec[f"pba_{prefix}_{alianza}_last_pct"] = last[1]
             if last_year is None or last[0] > last_year: last_year = last[0]
-        rec["pba_pres_last_year"] = last_year
-        out[code] = rec
+        rec[f"pba_{prefix}_last_year"] = last_year
+    return out
 
-    print(f"Municipios matcheados: {matched}/{len(seccion_grouped)}")
+
+def merge(base: dict, extra: dict) -> dict:
+    for code, rec in extra.items():
+        base.setdefault(code, {}).update(rec)
+    return base
+
+
+def main() -> None:
+    code_lookup = load_pba_codes()
+    print(f"PBA municipios: {len(code_lookup)}")
+
+    all_data: dict[str, dict] = {}
+    print("=== Presidente ===")
+    merge(all_data, process_cargo(CSV_FILES_PRES, "pres", code_lookup))
+    print("=== Diputados ===")
+    merge(all_data, process_cargo(CSV_FILES_DIP, "dip", code_lookup))
+    print("=== Senadores ===")
+    merge(all_data, process_cargo(CSV_FILES_SEN, "sen", code_lookup))
+
     out_path = WEB / "pba_elecciones_municipal.json"
-    out_path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")),
+    out_path.write_text(json.dumps(all_data, ensure_ascii=False, separators=(",", ":")),
                         encoding="utf-8")
-    print(f"-> {out_path.name} ({len(out)} muni, {out_path.stat().st_size/1024:.0f} KB)")
+    print(f"-> {out_path.name} ({len(all_data)} muni, {out_path.stat().st_size/1024:.0f} KB)")
 
 
 if __name__ == "__main__":

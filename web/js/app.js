@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518i · PBA histórico electoral 2011-2023 + sparkline multi-serie");
+console.log("[ATLAS] build 20260518j · PBA Pres+Dip+Sen + producción agrícola SAGyP");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -189,11 +189,34 @@ const DATASETS = {
       ["pba_pres_lla_last_pct", "% LLA último Pres."],
       ["pba_pres_hacemos_last_pct", "% Hacemos último Pres."],
       ["pba_pres_izq_last_pct", "% FIT último Pres."],
+      ["pba_dip_pj_last_pct", "% Peronismo último Dip."],
+      ["pba_dip_jxc_last_pct", "% JxC último Dip."],
+      ["pba_dip_lla_last_pct", "% LLA último Dip."],
+      ["pba_sen_pj_last_pct", "% Peronismo último Sen."],
+      ["pba_sen_jxc_last_pct", "% JxC último Sen."],
+      ["pba_sen_lla_last_pct", "% LLA último Sen."],
     ],
     defaultVar: "pba_pres_lla_last_pct",
-    paletteFor: (v) => v === "pba_pres_lla_last_pct" ? "lla"
-      : v === "pba_pres_pj_last_pct" ? "pj"
-      : v === "pba_pres_jxc_last_pct" ? "jxc" : "default",
+    paletteFor: (v) => /lla_last/.test(v) ? "lla"
+      : /pj_last/.test(v) ? "pj"
+      : /jxc_last/.test(v) ? "jxc" : "default",
+  },
+  agro: {
+    label: "Economía · Producción agrícola 2024",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/agro_provincia.json`,
+    vars: [
+      ["agro_produccion_total_tm", "Producción total (tm)"],
+      ["agro_superficie_total_ha", "Superficie sembrada (ha)"],
+      ["agro_soja_tm", "Soja (tm)"],
+      ["agro_trigo_tm", "Trigo (tm)"],
+      ["agro_maiz_tm", "Maíz (tm)"],
+      ["agro_girasol_tm", "Girasol (tm)"],
+      ["agro_soja_share", "% Soja en producción"],
+      ["agro_maiz_share", "% Maíz en producción"],
+    ],
+    defaultVar: "agro_produccion_total_tm",
   },
   pba: {
     label: "PBA · Municipios",
@@ -296,7 +319,7 @@ const indicadores = Object.fromEntries(["censo",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
-  "pba","caba","trade","covid","pba_elec","_swing"].map(k => [k, {}]));
+  "pba","caba","trade","covid","pba_elec","agro","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
