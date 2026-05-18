@@ -47,6 +47,17 @@ ALIANZAS_BAL_2023 = {
     "lla": ["LA LIBERTAD AVANZA"],
     "pj":  ["UNION POR LA PATRIA", "UNIÓN POR LA PATRIA"],
 }
+# Para diputados/senadores hay variantes provinciales — agregamos algunos sinónimos
+ALIANZAS_LEGIS_2023 = {
+    "lla":     ["LA LIBERTAD AVANZA"],
+    "pj":      ["UNION POR LA PATRIA", "UNIÓN POR LA PATRIA", "FRENTE DE TODOS"],
+    "jxc":     ["JUNTOS POR EL CAMBIO", "JUNTOS POR ENTRE RIOS",
+                "ENCUENTRO POR CORRIENTES", "ECO + VAMOS CORRIENTES"],
+    "hacemos": ["HACEMOS POR NUESTRO PAIS", "HACEMOS POR NUESTRO PAÍS",
+                "HACEMOS POR CORDOBA", "HACEMOS UNIDOS POR SANTA FE"],
+    "izq":     ["FRENTE DE IZQUIERDA Y DE TRABAJADORES - UNIDAD",
+                "FRENTE DE IZQUIERDA"],
+}
 
 VOTO_TIPOS = ["POSITIVO", "BLANCO", "NULO", "RECURRIDO", "IMPUGNADO", "COMANDO"]
 
@@ -117,7 +128,7 @@ def load_lookups() -> tuple[dict[str, dict[str, str]], dict[str, str]]:
     return depto_lookup, prov_lookup
 
 
-def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str) -> tuple[dict, dict]:
+def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str, exact_cargo: bool = False) -> tuple[dict, dict]:
     print(f"[{label}] leyendo {csv_path.name} ({csv_path.stat().st_size/1024**2:.0f} MB)…")
     depto_lookup, prov_lookup = load_lookups()
     alianza_map = alianza_mapper(alianzas)
@@ -141,8 +152,12 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str) -> 
     reader = pd.read_csv(csv_path, usecols=USE, chunksize=CHUNK, dtype=str, low_memory=False)
     total = 0
     for ch in reader:
-        # Filtrar cargo
-        mask = ch["cargo_nombre"].fillna("").str.contains(cargo_filter, case=False, na=False)
+        # Filtrar cargo (exact match si se pidió, para no agarrar PROVINCIAL cuando se quiere NACIONAL)
+        cargo_col = ch["cargo_nombre"].fillna("")
+        if exact_cargo:
+            mask = cargo_col.str.upper() == cargo_filter.upper()
+        else:
+            mask = cargo_col.str.contains(cargo_filter, case=False, na=False)
         ch = ch.loc[mask].copy()
         if ch.empty:
             continue
@@ -261,19 +276,24 @@ def aggregate(csv_path: Path, alianzas: dict, cargo_filter: str, label: str) -> 
 
 
 def main() -> None:
+    CSV_GEN = RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv"
     runs = [
-        {"label": "2023_generales",
-         "csv": RAW / "2023_Generales" / "ResultadoElectorales_2023_Generales.csv",
-         "alianzas": ALIANZAS_GEN_2023, "cargo": "PRESIDENTE"},
+        {"label": "2023_generales", "csv": CSV_GEN,
+         "alianzas": ALIANZAS_GEN_2023, "cargo": "PRESIDENTE", "exact": False},
         {"label": "2023_balotaje",
          "csv": RAW / "2023_segundavuelta" / "ResultadosElectorales_2023_SegundaVuelta.csv",
-         "alianzas": ALIANZAS_BAL_2023, "cargo": "PRESIDENTE"},
+         "alianzas": ALIANZAS_BAL_2023, "cargo": "PRESIDENTE", "exact": False},
+        {"label": "2023_diputados", "csv": CSV_GEN,
+         "alianzas": ALIANZAS_LEGIS_2023, "cargo": "DIPUTADO NACIONAL", "exact": True},
+        {"label": "2023_senadores", "csv": CSV_GEN,
+         "alianzas": ALIANZAS_LEGIS_2023, "cargo": "SENADOR NACIONAL", "exact": True},
     ]
     catalog = {"elecciones": []}
     for run in runs:
         if not run["csv"].exists():
             print(f"  [SKIP] {run['label']}"); continue
-        prov, depto = aggregate(run["csv"], run["alianzas"], run["cargo"], run["label"])
+        prov, depto = aggregate(run["csv"], run["alianzas"], run["cargo"], run["label"],
+                                exact_cargo=run.get("exact", False))
         path_prov = WEB / f"elecciones_{run['label']}_provincia.json"
         path_depto = WEB / f"elecciones_{run['label']}_departamento.json"
         path_prov.write_text(json.dumps(prov, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

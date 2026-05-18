@@ -67,6 +67,34 @@ const DATASETS = {
     defaultVar: "lla_pct",
     paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : "default",
   },
+  "2023_diputados": {
+    label: "Diputados Nac. 2023",
+    levels: ["provincias", "departamentos"],
+    fileFor: (level) => `../data/web/elecciones_2023_diputados_${level === "provincias" ? "provincia" : "departamento"}.json`,
+    vars: [
+      ["lla_pct", "% LLA"],
+      ["pj_pct", "% UP (PJ)"],
+      ["jxc_pct", "% JxC + aliados"],
+      ["hacemos_pct", "% Hacemos + aliados"],
+      ["izq_pct", "% FIT"],
+      ["participacion", "Participación"],
+    ],
+    defaultVar: "lla_pct",
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+  },
+  "2023_senadores": {
+    label: "Senadores Nac. 2023 (8 prov.)",
+    levels: ["provincias", "departamentos"],
+    fileFor: (level) => `../data/web/elecciones_2023_senadores_${level === "provincias" ? "provincia" : "departamento"}.json`,
+    vars: [
+      ["lla_pct", "% LLA"],
+      ["pj_pct", "% UP (PJ)"],
+      ["jxc_pct", "% JxC + aliados"],
+      ["participacion", "Participación"],
+    ],
+    defaultVar: "lla_pct",
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+  },
 };
 
 const $ = (s, c=document) => c.querySelector(s);
@@ -93,7 +121,7 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.p
 const layerCache = {};
 const radioProvCache = {};
 const radioProvLoading = new Set();
-const indicadores = { censo: {}, "2023_generales": {}, "2023_balotaje": {} };
+const indicadores = { censo: {}, "2023_generales": {}, "2023_balotaje": {}, "2023_diputados": {}, "2023_senadores": {} };
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;

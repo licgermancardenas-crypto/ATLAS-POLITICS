@@ -63,6 +63,14 @@ Por provincia + departamento (matching por nombre con INDEC):
 
 Mismo schema, solo dos alianzas: `lla_pct` y `pj_pct`.
 
+### Diputados Nacionales 2023
+
+Por provincia + departamento. Variables `lla_pct`, `pj_pct`, `jxc_pct`, `hacemos_pct`, `izq_pct`, `participacion`. Las coaliciones JxC y Hacemos incluyen variantes provinciales (ej. "Encuentro por Corrientes", "Hacemos Unidos por Santa Fe") sumadas a las nacionales.
+
+### Senadores Nacionales 2023 (8 provincias)
+
+Solo se renovaron senadores en: Buenos Aires, Formosa, Jujuy, La Rioja, Misiones, San Juan, San Luis, Santa Cruz. Variables: `lla_pct`, `pj_pct`, `jxc_pct`, `participacion`. Las provincias sin datos no aparecen en el dataset.
+
 ## APIs en vivo (consumidas desde el navegador)
 
 - **argentinadatos**: cotizaciones de dólar, inflación mensual e interanual, riesgo país, índice UVA, tasas plazo fijo, feriados, senadores, diputados, presidentes.

@@ -26,6 +26,36 @@
       "file_departamento": "data/elecciones_2023_balotaje_departamento.json",
       "n_provincias": 24,
       "n_departamentos": 523
+    },
+    {
+      "id": "2023_diputados",
+      "cargo": "DIPUTADO NACIONAL",
+      "alianzas": [
+        "lla",
+        "pj",
+        "jxc",
+        "hacemos",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2023_diputados_provincia.json",
+      "file_departamento": "data/elecciones_2023_diputados_departamento.json",
+      "n_provincias": 24,
+      "n_departamentos": 523
+    },
+    {
+      "id": "2023_senadores",
+      "cargo": "SENADOR NACIONAL",
+      "alianzas": [
+        "lla",
+        "pj",
+        "jxc",
+        "hacemos",
+        "izq"
+      ],
+      "file_provincia": "data/elecciones_2023_senadores_provincia.json",
+      "file_departamento": "data/elecciones_2023_senadores_departamento.json",
+      "n_provincias": 8,
+      "n_departamentos": 227
     }
   ]
 }
