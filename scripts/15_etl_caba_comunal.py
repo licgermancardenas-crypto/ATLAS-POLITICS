@@ -26,6 +26,8 @@ RAW.mkdir(parents=True, exist_ok=True)
 
 URL_POB = "https://cdn.buenosaires.gob.ar/datosabiertos/datasets/comunas/gcba_pob_comunas_17.csv"
 URL_DELITOS = "https://cdn.buenosaires.gob.ar/datosabiertos/datasets/ministerio-de-justicia-y-seguridad/delitos/delitos_2023.csv"
+URL_VIVIENDA = "https://cdn.buenosaires.gob.ar/datosabiertos/datasets/instituto-de-vivienda/vivienda-durable-calidad-constructiva-vivienda/calidad-constructiva-hacinamiento-por-comuna.csv"
+URL_COHAB = "https://cdn.buenosaires.gob.ar/datosabiertos/datasets/instituto-de-vivienda/vivienda-durable-calidad-constructiva-vivienda/cohabitacion-hacinamiento-hogares-por-comuna.csv"
 
 # CABA codigo INDEC depto = "02" + 3 digitos. Comuna 1 = 02007, Comuna 2 = 02014, ...
 # El mapeo INDEC oficial:
@@ -83,11 +85,38 @@ def main() -> None:
             rec["robos_por_10k_hab_2023"] = round(robo / pob_v * 10_000, 1)
         out[code] = rec
 
+    # Vivienda — calidad constructiva
+    viv_csv = download(URL_VIVIENDA, "caba_vivienda.csv")
+    viv = pd.read_csv(viv_csv, dtype=str)
+    viv = viv[pd.to_numeric(viv["comuna"], errors="coerce").notna()].copy()
+    viv["comuna"] = viv["comuna"].astype(int)
+    for _, r in viv.iterrows():
+        code = COMUNA_TO_INDEC.get(int(r["comuna"]))
+        if not code: continue
+        out.setdefault(code, {}).update({
+            "vivienda_calidad_satisfactoria_pct": float(r.get("Calidad Satisfactoria", 0)),
+            "vivienda_calidad_basica_pct": float(r.get("Calidad Básica", 0)),
+            "vivienda_calidad_insuficiente_pct": float(r.get("Calidad Insuficiente", 0)),
+        })
+
+    # Cohabitación / hacinamiento
+    coh_csv = download(URL_COHAB, "caba_cohabitacion.csv")
+    coh = pd.read_csv(coh_csv, dtype=str)
+    coh = coh[pd.to_numeric(coh["comuna"], errors="coerce").notna()].copy()
+    coh["comuna"] = coh["comuna"].astype(int)
+    for _, r in coh.iterrows():
+        code = COMUNA_TO_INDEC.get(int(r["comuna"]))
+        if not code: continue
+        out.setdefault(code, {}).update({
+            "vivienda_un_hogar_pct": float(r.get("Viviendas con un hogar", 0)),
+            "vivienda_dos_o_mas_hogares_pct": float(r.get("Viviendas con 2 o más hogares", 0)),
+        })
+
     out_path = WEB / "caba_comunal.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")),
                         encoding="utf-8")
     print(f"-> {out_path.name} ({len(out)} comunas, {out_path.stat().st_size/1024:.0f} KB)")
-    print(f"Total delitos 2023: {sum(r['delitos_2023_total'] for r in out.values()):,}")
+    print(f"Total delitos 2023: {sum(r.get('delitos_2023_total',0) for r in out.values()):,}")
 
 
 if __name__ == "__main__":

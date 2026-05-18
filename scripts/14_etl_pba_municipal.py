@@ -29,6 +29,7 @@ RAW.mkdir(parents=True, exist_ok=True)
 
 URL_TRANSF = "https://catalogo.datos.gba.gob.ar/dataset/96ee21b4-b116-4b83-9228-ba664af1b480/resource/d13acdb6-bd59-4c09-b954-8f3258a65e8a/download/transferencias-municipios-012010_032026.csv"
 URL_POB = "https://catalogo.datos.gba.gob.ar/dataset/cc6d2010-6f67-4c98-8d89-af39703f46fb/resource/09d57241-8437-454a-b4ff-88330d65d60e/download/proyecciones-poblacion-2010_2025.csv"
+URL_CAMAS = "https://catalogo.datos.gba.gob.ar/dataset/b60257fb-a914-4a27-a54c-6f2a91b3154d/resource/f89ab59e-3d2f-4e33-b8e8-bf52c3a8d108/download/camas-criticas-2018_2023.csv"
 
 
 def download(url: str, name: str) -> Path:
@@ -86,6 +87,22 @@ def main() -> None:
             if pd.notna(p["pob_crecimiento_pct"]):
                 rec["pob_crecimiento_pct_2010_2025"] = float(p["pob_crecimiento_pct"])
         out[code] = rec
+
+    # Camas críticas por municipio (último año disponible)
+    camas_csv = download(URL_CAMAS, "pba_camas_criticas.csv")
+    cdf = pd.read_csv(camas_csv, dtype=str)
+    cdf["anio"] = pd.to_numeric(cdf["anio"], errors="coerce")
+    cdf["camas_disponibles"] = pd.to_numeric(cdf["camas_disponibles"], errors="coerce").fillna(0)
+    last_y = int(cdf["anio"].max())
+    camas_sum = (cdf[cdf["anio"] == last_y]
+                  .groupby("municipio_id")["camas_disponibles"].sum())
+    for code, total in camas_sum.items():
+        code = str(code).zfill(5)
+        if code in out:
+            out[code]["camas_criticas"] = int(total)
+            out[code]["camas_criticas_year"] = last_y
+            if out[code].get("poblacion_2025"):
+                out[code]["camas_criticas_por_100k_hab"] = round(int(total) / out[code]["poblacion_2025"] * 100_000, 2)
 
     out_path = WEB / "pba_municipal.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")),

@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518f · PBA municipios + CABA comunas (transferencias + delitos)");
+console.log("[ATLAS] build 20260518g · sparkline panel + CABA vivienda + PBA camas críticas");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -153,20 +153,22 @@ const DATASETS = {
     defaultVar: "establecimientos_por_10k_hab",
   },
   pba: {
-    label: "PBA · Transferencias municipales 2025",
+    label: "PBA · Municipios",
     year: 2025,
     levels: ["departamentos", "municipios"],
     fileFor: () => `../data/web/pba_municipal.json`,
     vars: [
-      ["transferencias_pba_total", "Transferencias PBA totales ($)"],
       ["transferencias_pba_per_capita", "Transferencias per cápita ($)"],
+      ["transferencias_pba_total", "Transferencias totales ($)"],
       ["poblacion_2025", "Población proyectada 2025"],
-      ["pob_crecimiento_pct_2010_2025", "Crecimiento poblacional 2010-2025 %"],
+      ["pob_crecimiento_pct_2010_2025", "Crecimiento pob 2010-25 %"],
+      ["camas_criticas", "Camas críticas (último)"],
+      ["camas_criticas_por_100k_hab", "Camas críticas / 100k hab"],
     ],
     defaultVar: "transferencias_pba_per_capita",
   },
   caba: {
-    label: "CABA · Delitos 2023 por comuna",
+    label: "CABA · Por comuna",
     year: 2023,
     levels: ["departamentos"],
     fileFor: () => `../data/web/caba_comunal.json`,
@@ -178,6 +180,9 @@ const DATASETS = {
       ["delitos_2023_hurtos", "Hurtos"],
       ["delitos_2023_homicidios", "Homicidios"],
       ["delitos_2023_lesiones", "Lesiones"],
+      ["vivienda_calidad_satisfactoria_pct", "% vivienda calidad satisfactoria"],
+      ["vivienda_calidad_insuficiente_pct", "% vivienda calidad insuficiente"],
+      ["vivienda_dos_o_mas_hogares_pct", "% viviendas con ≥2 hogares"],
     ],
     defaultVar: "delitos_por_10k_hab_2023",
   },
@@ -641,6 +646,7 @@ async function refreshSelectedPanel(props) {
   }
   renderKpis(ind);
   renderCompare(ind, props);
+  renderSpark(ind);
   renderHist(ind);
   renderExtras(ind);
   switchTab("info");
@@ -725,10 +731,52 @@ function renderHist(ind) {
 function renderExtras(ind) {
   const extras = $("#sel-extras");
   if (!ind) { extras.innerHTML = "<p>Sin indicadores para este nivel.</p>"; return; }
-  const rows = Object.entries(ind).filter(([k]) => !k.startsWith("_")).map(([k, v]) =>
-    `<tr><td>${labelFor(k)}</td><td>${typeof v === "number" ? fmtVal(v, k) : v}</td></tr>`
-  ).join("");
+  const rows = Object.entries(ind)
+    .filter(([k, v]) => !k.startsWith("_") && !Array.isArray(v))
+    .map(([k, v]) => `<tr><td>${labelFor(k)}</td><td>${typeof v === "number" ? fmtVal(v, k) : v}</td></tr>`)
+    .join("");
   extras.innerHTML = `<table>${rows}</table>`;
+}
+
+function renderSpark(ind) {
+  const wrap = $("#sel-spark");
+  if (!ind) { wrap.innerHTML = ""; return; }
+  // Buscar primer campo que sea array de [año, valor] o de {fecha, valor}
+  const serieKey = Object.keys(ind).find(k => k.endsWith("_serie") || k.endsWith("_serie_1ra") || k.endsWith("_serie_12m"));
+  if (!serieKey) { wrap.innerHTML = ""; return; }
+  let serie = ind[serieKey];
+  if (!Array.isArray(serie) || !serie.length) { wrap.innerHTML = ""; return; }
+  // Normalizar a [{x, y}]
+  const points = serie.map(p => {
+    if (Array.isArray(p)) return { x: String(p[0]), y: +p[1] };
+    if (typeof p === "object") return { x: p.fecha || p.year || "", y: +(p.valor ?? p.value ?? 0) };
+    return null;
+  }).filter(p => p && isFinite(p.y));
+  if (points.length < 2) { wrap.innerHTML = ""; return; }
+  const W = 320, H = 50, m = { l: 4, r: 4, t: 4, b: 4 };
+  const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
+  const ys = points.map(p => p.y);
+  const mn = Math.min(...ys), mx = Math.max(...ys), range = mx - mn || 1;
+  const sx = i => m.l + (i / (points.length - 1)) * innerW;
+  const sy = v => m.t + innerH - ((v - mn) / range) * innerH;
+  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${sx(i).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+  const titleMap = {
+    mortalidad_infantil_serie: "Mortalidad infantil (serie histórica)",
+    vacuna_srp_serie_1ra: "Cobertura SRP 1ra dosis (anual)",
+    ipc_serie_12m: "IPC últimos 12 meses",
+  };
+  const title = titleMap[serieKey] || serieKey.replace(/_/g, " ");
+  wrap.innerHTML = `
+    <div class="spark-title">${title}</div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <path d="${path}" fill="none" stroke="#5aa3ff" stroke-width="1.4"/>
+      <circle cx="${sx(points.length-1)}" cy="${sy(points[points.length-1].y)}" r="2.5" fill="#7df2c6"/>
+    </svg>
+    <div class="spark-meta">
+      <span>${points[0].x}</span>
+      <span>último: ${fmtVal(points[points.length-1].y)}</span>
+      <span>${points[points.length-1].x}</span>
+    </div>`;
 }
 
 // -- Ranking --
