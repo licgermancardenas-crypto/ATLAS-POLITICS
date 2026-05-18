@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518e · Series Tiempo API + Georef search + vacunas + README fuentes");
+console.log("[ATLAS] build 20260518f · PBA municipios + CABA comunas (transferencias + delitos)");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -152,6 +152,35 @@ const DATASETS = {
     ],
     defaultVar: "establecimientos_por_10k_hab",
   },
+  pba: {
+    label: "PBA · Transferencias municipales 2025",
+    year: 2025,
+    levels: ["departamentos", "municipios"],
+    fileFor: () => `../data/web/pba_municipal.json`,
+    vars: [
+      ["transferencias_pba_total", "Transferencias PBA totales ($)"],
+      ["transferencias_pba_per_capita", "Transferencias per cápita ($)"],
+      ["poblacion_2025", "Población proyectada 2025"],
+      ["pob_crecimiento_pct_2010_2025", "Crecimiento poblacional 2010-2025 %"],
+    ],
+    defaultVar: "transferencias_pba_per_capita",
+  },
+  caba: {
+    label: "CABA · Delitos 2023 por comuna",
+    year: 2023,
+    levels: ["departamentos"],
+    fileFor: () => `../data/web/caba_comunal.json`,
+    vars: [
+      ["delitos_por_10k_hab_2023", "Delitos por 10k hab"],
+      ["robos_por_10k_hab_2023", "Robos por 10k hab"],
+      ["delitos_2023_total", "Delitos totales"],
+      ["delitos_2023_robos", "Robos"],
+      ["delitos_2023_hurtos", "Hurtos"],
+      ["delitos_2023_homicidios", "Homicidios"],
+      ["delitos_2023_lesiones", "Lesiones"],
+    ],
+    defaultVar: "delitos_por_10k_hab_2023",
+  },
   vacunas: {
     label: "Sociales · Vacuna SRP (Triple Viral)",
     year: 2019,
@@ -218,7 +247,8 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "economia","socio","ipc","empleo","salud","educacion","vacunas","_swing"].map(k => [k, {}]));
+  "economia","socio","ipc","empleo","salud","educacion","vacunas",
+  "pba","caba","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
