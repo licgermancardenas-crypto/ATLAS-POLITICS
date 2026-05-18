@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518b · socio (mortalidad) + plazo fijo + feriados + presidentes");
+console.log("[ATLAS] build 20260518c · IPC INDEC nacional + regional + dataset por provincia");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -113,6 +113,19 @@ const DATASETS = {
     ],
     defaultVar: "mortalidad_infantil",
   },
+  ipc: {
+    label: "Economía · IPC por región",
+    year: 2026,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/ipc_provincia.json`,
+    vars: [
+      ["ipc_var_mensual", "Inflación mensual %"],
+      ["ipc_var_interanual", "Inflación interanual %"],
+      ["ipc_acum_12m", "Inflación acum. 12m %"],
+      ["ipc_nivel", "Índice IPC (base dic-2016=100)"],
+    ],
+    defaultVar: "ipc_var_interanual",
+  },
   // Pseudo-dataset para swing — alimentado dinámicamente
   _swing: {
     label: "Swing",
@@ -154,7 +167,7 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "economia","socio","_swing"].map(k => [k, {}]));
+  "economia","socio","ipc","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -991,6 +1004,24 @@ async function loadEconomia() {
       </div>`).join("");
     $("#blk-feriados").innerHTML = `<h3>Próximos feriados ${yr}</h3>${html || '<div class="loading">No quedan feriados</div>'}`;
   } catch { $("#blk-feriados").innerHTML = `<h3>Feriados</h3><div class="loading">Error</div>`; }
+
+  // IPC INDEC por región — del JSON local pre-procesado
+  try {
+    const r = await fetch("../data/web/ipc_nacional.json");
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    const order = ["nacional", "gba", "pampeana", "nea", "noa", "cuyo", "patagonia"];
+    const rows = order.filter(k => data.regiones[k]).map(k => {
+      const d = data.regiones[k];
+      return `<div class="rate">
+        <span class="n">${k.toUpperCase()}</span>
+        <span class="b">${d.ipc_var_mensual?.toFixed(2)}% m/m
+        <span style="color:var(--muted);margin-left:6px">${d.ipc_var_interanual?.toFixed(1)}% i.a.</span></span>
+      </div>`;
+    }).join("");
+    $("#blk-ipc-reg").innerHTML = `<h3>IPC INDEC por región (${data.last_date})</h3>${rows}
+      <div class="meta">Base diciembre 2016 = 100</div>`;
+  } catch { $("#blk-ipc-reg").innerHTML = `<h3>IPC regional</h3><div class="loading">Error</div>`; }
 }
 
 async function loadPolitica() {
