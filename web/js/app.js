@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518d · empleo EPH + salud REFES + educación + pobreza panel");
+console.log("[ATLAS] build 20260518e · Series Tiempo API + Georef search + vacunas + README fuentes");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -152,6 +152,17 @@ const DATASETS = {
     ],
     defaultVar: "establecimientos_por_10k_hab",
   },
+  vacunas: {
+    label: "Sociales · Vacuna SRP (Triple Viral)",
+    year: 2019,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/vacunas_provincia.json`,
+    vars: [
+      ["vacuna_srp_1ra_dosis_pct", "% Cobertura 1ra dosis"],
+      ["vacuna_srp_2da_dosis_pct", "% Cobertura 2da dosis"],
+    ],
+    defaultVar: "vacuna_srp_1ra_dosis_pct",
+  },
   educacion: {
     label: "Sociales · Educación (escuelas)",
     year: 2024,
@@ -207,7 +218,7 @@ const indicadores = Object.fromEntries(["censo",
   "2015_generales","2015_balotaje","2017_diputados",
   "2019_paso","2019_generales","2021_diputados",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
-  "economia","socio","ipc","empleo","salud","educacion","_swing"].map(k => [k, {}]));
+  "economia","socio","ipc","empleo","salud","educacion","vacunas","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -859,6 +870,10 @@ function switchTab(name) {
   $$(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
   if (name === "cruce") renderCruce();
   if (name === "comparar") renderComparar();
+  if (name === "series") {
+    // Cargar IPC por defecto en primera apertura
+    if (!$("#ser-svg").innerHTML.trim()) loadSerie("148.3_INIVELNAL_DICI_M_26");
+  }
 }
 $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
 
@@ -882,21 +897,74 @@ function norm(s) {
 let searchActiveIdx = -1;
 const searchInput = $("#search");
 const searchResults = $("#search-results");
+let georefDebounce;
+async function searchGeoref(q) {
+  // Probar primero localidad+depto+prov por nombre, luego dirección
+  const tryEndpoint = async (path, key) => {
+    try {
+      const r = await fetch(`https://apis.datos.gob.ar/georef/api/${path}?${key}=${encodeURIComponent(q)}&max=8`);
+      if (!r.ok) return [];
+      const d = await r.json();
+      return d[Object.keys(d)[0]] || [];
+    } catch { return []; }
+  };
+  const [locs, dirs] = await Promise.all([
+    tryEndpoint("localidades", "nombre"),
+    /\d/.test(q) ? tryEndpoint("direcciones", "direccion") : Promise.resolve([]),
+  ]);
+  const hits = [];
+  locs.forEach(l => {
+    const lat = l.centroide?.lat, lng = l.centroide?.lon;
+    if (lat == null || lng == null) return;
+    hits.push({
+      nombre: l.nombre, level: "georef-localidad",
+      ctx: `${l.departamento?.nombre || ""} · ${l.provincia?.nombre || ""}`,
+      codigo: l.id,
+      latlng: [lat, lng],
+      _norm: norm(l.nombre),
+    });
+  });
+  dirs.forEach(d => {
+    const lat = d.ubicacion?.lat, lng = d.ubicacion?.lon;
+    if (lat == null || lng == null) return;
+    hits.push({
+      nombre: d.nomenclatura, level: "georef-direccion",
+      ctx: `${d.localidad_censal?.nombre || ""} · ${d.provincia?.nombre || ""}`,
+      codigo: null, latlng: [lat, lng],
+      _norm: norm(d.nomenclatura),
+    });
+  });
+  return hits;
+}
+
 searchInput.addEventListener("input", () => {
+  clearTimeout(georefDebounce);
   const q = norm(searchInput.value);
   if (!q || q.length < 2) { searchResults.classList.remove("open"); return; }
-  const hits = searchIndex.filter(h => h._norm.includes(q)).slice(0, 12);
-  if (!hits.length) { searchResults.innerHTML = `<li class="muted">Sin resultados</li>`; searchResults.classList.add("open"); return; }
-  searchResults.innerHTML = hits.map((h, i) => `
-    <li data-idx="${i}">
-      <span class="lvl">${h.level}</span>
-      <div class="nom">${h.nombre}</div>
-      ${h.ctx ? `<div class="ctx">${h.ctx}</div>` : ""}
-    </li>`).join("");
-  searchActiveIdx = 0;
-  searchResults.classList.add("open");
-  hits.forEach((h, i) => searchResults.children[i].addEventListener("click", () => goTo(h)));
-  searchResults._hits = hits;
+  const localHits = searchIndex.filter(h => h._norm.includes(q)).slice(0, 8);
+  // Render inmediato con locales
+  const renderHits = (hits) => {
+    if (!hits.length) { searchResults.innerHTML = `<li class="muted">Sin resultados</li>`; searchResults.classList.add("open"); return; }
+    searchResults.innerHTML = hits.map((h, i) => `
+      <li data-idx="${i}">
+        <span class="lvl">${h.level}</span>
+        <div class="nom">${h.nombre}</div>
+        ${h.ctx ? `<div class="ctx">${h.ctx}</div>` : ""}
+      </li>`).join("");
+    searchActiveIdx = 0;
+    searchResults.classList.add("open");
+    hits.forEach((h, i) => searchResults.children[i].addEventListener("click", () => goTo(h)));
+    searchResults._hits = hits;
+  };
+  renderHits(localHits);
+  // Augment con Georef solo si hay <4 locales (más útil para nombres raros)
+  if (localHits.length < 4 && q.length >= 3) {
+    georefDebounce = setTimeout(async () => {
+      const gh = await searchGeoref(searchInput.value);
+      if (norm(searchInput.value) !== q) return; // user typed más
+      renderHits([...localHits, ...gh].slice(0, 12));
+    }, 350);
+  }
 });
 searchInput.addEventListener("keydown", e => {
   const hits = searchResults._hits || [];
@@ -910,8 +978,16 @@ document.addEventListener("click", e => { if (!e.target.closest("#search-wrap"))
 async function goTo(hit) {
   searchResults.classList.remove("open");
   searchInput.value = hit.nombre;
-  await setLevel(hit.level, { fit: false });
-  zoomToCode(hit.codigo);
+  if (hit.latlng) {
+    // Georef hit: solo mover el mapa al punto
+    map.setView(hit.latlng, hit.level === "georef-direccion" ? 15 : 12);
+    // Si es localidad, marker temporal
+    L.circleMarker(hit.latlng, { radius: 6, color: "#fff", fillColor: "#5aa3ff", fillOpacity: 0.7, weight: 2 })
+      .addTo(map).bindTooltip(hit.nombre, { permanent: false }).openTooltip();
+  } else {
+    await setLevel(hit.level, { fit: false });
+    zoomToCode(hit.codigo);
+  }
 }
 
 // -- Permalink --
@@ -1265,6 +1341,73 @@ async function renderCruce() {
     });
   });
 });
+
+// -- Series de Tiempo API (datos.gob.ar) --
+const SERIES_API = "https://apis.datos.gob.ar/series/api";
+let serDebounce;
+async function searchSeries(q) {
+  if (!q || q.length < 3) { $("#ser-results").innerHTML = ""; return; }
+  try {
+    const r = await fetch(`${SERIES_API}/search/?q=${encodeURIComponent(q)}&limit=12`);
+    const d = await r.json();
+    const html = (d.data || []).map(it => {
+      const f = it.field || {}; const ds = it.dataset || {};
+      return `<div class="rk-row ser-pick" data-id="${f.id}" title="${f.id}">
+        <span class="nom">${(f.description || f.title || f.id).slice(0, 60)}
+          <span class="ctx">${(ds.source || ds.title || "").slice(0, 40)} · ${f.frequency || ""}</span></span>
+      </div>`;
+    }).join("");
+    $("#ser-results").innerHTML = html || "<div style='color:var(--muted)'>Sin resultados</div>";
+    $$(".ser-pick", $("#ser-results")).forEach(el => {
+      el.addEventListener("click", () => loadSerie(el.dataset.id));
+    });
+  } catch (e) { $("#ser-results").innerHTML = `<div style='color:var(--danger)'>Error API</div>`; }
+}
+async function loadSerie(id) {
+  $("#ser-meta").innerHTML = `Cargando ${id}…`;
+  try {
+    const r = await fetch(`${SERIES_API}/series/?ids=${id}&limit=240&format=json`);
+    const d = await r.json();
+    const data = d.data || [];
+    const meta = d.meta?.[1] || {};
+    const fld = meta.field || {};
+    const ds = meta.dataset || {};
+    if (!data.length) throw new Error("vacía");
+    // Render meta
+    $("#ser-meta").innerHTML = `
+      <span style="flex:1">${fld.description || id}</span>
+      <span class="r">${data.length} pts</span>`;
+    // SVG
+    const W = 340, H = 180, m = { l: 40, r: 10, t: 8, b: 22 };
+    const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
+    const vs = data.map(p => +p[1]).filter(v => isFinite(v));
+    const mn = Math.min(...vs), mx = Math.max(...vs);
+    const range = mx - mn || 1;
+    const sx = i => m.l + (i / (data.length - 1)) * innerW;
+    const sy = v => m.t + innerH - ((v - mn) / range) * innerH;
+    const path = data.map((p, i) => `${i === 0 ? "M" : "L"}${sx(i).toFixed(1)},${sy(+p[1]).toFixed(1)}`).join(" ");
+    const fmtTick = v => Math.abs(v) >= 1000 ? fmt.format(Math.round(v)) : v.toFixed(2);
+    $("#ser-svg").innerHTML = `
+      <line stroke="${'#222b41'}" x1="${m.l}" y1="${m.t+innerH}" x2="${m.l+innerW}" y2="${m.t+innerH}"/>
+      <line stroke="${'#222b41'}" x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+innerH}"/>
+      <text fill="#8893ad" font-size="9" x="${m.l-4}" y="${m.t+8}" text-anchor="end">${fmtTick(mx)}</text>
+      <text fill="#8893ad" font-size="9" x="${m.l-4}" y="${m.t+innerH+4}" text-anchor="end">${fmtTick(mn)}</text>
+      <text fill="#8893ad" font-size="9" x="${m.l}" y="${H-4}">${data[0][0]}</text>
+      <text fill="#8893ad" font-size="9" x="${m.l+innerW}" y="${H-4}" text-anchor="end">${data[data.length-1][0]}</text>
+      <path d="${path}" fill="none" stroke="#5aa3ff" stroke-width="1.5"/>
+    `;
+    const last = data[data.length - 1];
+    $("#ser-hover").textContent = `Último: ${last[0]} → ${fmtTick(+last[1])} ${fld.units || ""} · ${ds.source || ""}`;
+  } catch (e) {
+    $("#ser-meta").innerHTML = `<span style='color:var(--danger)'>Error: ${e.message}</span>`;
+  }
+}
+
+$("#ser-q").addEventListener("input", () => {
+  clearTimeout(serDebounce);
+  serDebounce = setTimeout(() => searchSeries($("#ser-q").value), 280);
+});
+$$(".ser-q").forEach(b => b.addEventListener("click", () => loadSerie(b.dataset.id)));
 
 // -- Comparador --
 const compared = []; // [{code, nombre, level, dataset, ind, ctx}]

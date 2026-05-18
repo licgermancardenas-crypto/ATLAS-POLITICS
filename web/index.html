@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260518d" />
+<link rel="stylesheet" href="css/app.css?v=20260518e" />
 </head>
 <body>
 <div id="layout">
@@ -60,6 +60,7 @@
           <option value="socio">Mortalidad infantil (DEIS)</option>
           <option value="salud">Establecimientos de salud (REFES)</option>
           <option value="educacion">Escuelas (padrón 2024)</option>
+          <option value="vacunas">Cobertura vacuna SRP</option>
         </optgroup>
       </select>
       <label for="var-sel">Variable</label>
@@ -77,6 +78,7 @@
       <button class="tab" data-tab="swing">Swing</button>
       <button class="tab" data-tab="comparar">Comparar</button>
       <button class="tab" data-tab="modelo">Modelo</button>
+      <button class="tab" data-tab="series">Series</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -153,6 +155,31 @@
         </div>
         <div class="cruce-stats" id="mod-stats"></div>
         <div id="mod-coefs"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-series">
+      <div class="block">
+        <h3>Series de Tiempo · datos.gob.ar</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+          API oficial: ~28.000 series INDEC/SSPM/BCRA/Min. Energía/Producción.
+        </div>
+        <div class="cruce-controls">
+          <input id="ser-q" type="search" placeholder="Buscar serie (ej. EMAE, IPC, dólar, soja)…"
+            style="background:var(--bg-2);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:12px" />
+        </div>
+        <div id="ser-results" style="max-height:140px;overflow-y:auto;font-size:11px"></div>
+        <div class="cruce-stats" id="ser-meta"></div>
+        <svg id="ser-svg" viewBox="0 0 340 180" preserveAspectRatio="xMidYMid meet"
+          style="width:100%;height:auto;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;margin-top:6px"></svg>
+        <div class="cruce-hover" id="ser-hover">—</div>
+        <div style="margin-top:10px;font-size:11px">
+          <strong>Quick picks:</strong>
+          <button class="mini ser-q" data-id="148.3_INIVELNAL_DICI_M_26">IPC Nivel Gral</button>
+          <button class="mini ser-q" data-id="143.3_NO_PR_2004_A_21">EMAE</button>
+          <button class="mini ser-q" data-id="116.3_TCRZE_2015_D_36_4">TCR USA</button>
+          <button class="mini ser-q" data-id="92.1_RIBCRA_0_0_15_92">Reservas BCRA</button>
+        </div>
       </div>
     </section>
 
@@ -253,6 +280,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260518d" type="module"></script>
+<script src="js/app.js?v=20260518e" type="module"></script>
 </body>
 </html>

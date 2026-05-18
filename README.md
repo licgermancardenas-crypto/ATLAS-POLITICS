@@ -111,12 +111,49 @@ python -m http.server 8765
 
 Los scripts ETL asumen rutas a datos crudos en `C:/Users/corra/Downloads/` — adaptar al entorno donde se ejecuten.
 
-## Fuentes
+## Datasets integrados (resumen)
+
+| Dataset | Fuente | Granularidad | Cobertura |
+|---|---|---|---|
+| Geometrías 5 niveles | IGN | país→muni | 2.114 muni · 529 deptos · 24 prov |
+| Localidades | INDEC | punto | 3.526 |
+| Radios censales | INDEC 2022 | polígono | 50.223 (22 prov) |
+| Censo 2022 indicadores | INDEC | prov+depto+loc+radio | personas, hogares, viv, densidad, etc. |
+| Elecciones 2015 Generales | DINE | prov+depto | Pres + 5 alianzas |
+| Elecciones 2015 Balotaje | DINE | prov+depto | Pres + 2 alianzas |
+| Elecciones 2017 Diputados | DINE | prov+depto | Cambiemos/FpV/1Pais/FIT |
+| Elecciones 2019 PASO+Generales | DINE | prov+depto | FdT/JxC/CF/NOS/FIT |
+| Elecciones 2021 Diputados | DINE | prov+depto | FdT/JxC/**LLA**/FIT/VcV |
+| Elecciones 2023 (Pres+Bal+Dip+Sen) | DINE | prov+depto | LLA/UP/JxC/Hacemos/FIT |
+| Exportaciones 2024 | SSPM | prov | 11 vars por rubro |
+| IPC INDEC | INDEC | 6 regiones → 24 prov | mensual + interanual + acum 12m |
+| Desempleo EPH | INDEC | aglomerado→prov | tasa trimestral |
+| Pobreza nacional | INDEC EPH | nacional histórica | pobres/indigentes |
+| Mortalidad infantil | DEIS | prov | 1990-2024 |
+| Establec. de salud REFES | datos.salud.gob.ar | prov | 26.985 establec. |
+| Escuelas 2024 | educacion.gob.ar | prov | 64.601 escuelas |
+| Vacuna SRP cobertura | DICEI | prov | 2009-2019 |
+
+**APIs en vivo** (consumidas desde el navegador, sin almacenar):
+- `apis.datos.gob.ar/series` — Series de Tiempo Argentina (~28k series INDEC/SSPM/BCRA/Energía/Producción)
+- `apis.datos.gob.ar/georef` — Geocoding (provincias, deptos, municipios, localidades, calles, direcciones)
+- `api.argentinadatos.com` — dólar, inflación, riesgo país, plazo fijo, feriados, senadores, diputados, presidentes
+- `api.bcra.gob.ar/estadisticas/v4.0` — Principales variables monetarias
+
+## Fuentes oficiales
 
 - **IGN** — https://www.ign.gob.ar/NuestrasActividades/InformacionGeoespacial/CapasSIG
-- **INDEC Censo 2022** — https://www.indec.gob.ar/indec/web/Nivel4-Tema-2-41-165
-- **datos.gob.ar** — https://datos.gob.ar/apis
-- **argentinadatos** — https://argentinadatos.com/docs/
+- **INDEC** — https://www.indec.gob.ar/ · Censo 2022, IPC, EPH, mortalidad
+- **datos.gob.ar (CKAN)** — https://datos.gob.ar/apis · catálogo nacional
+- **Andino** (plataforma CKAN) — https://www.argentina.gob.ar/portal-andino
+- **Series de Tiempo** — https://www.argentina.gob.ar/datos-abiertos/api-series-de-tiempo
+- **Georef** — https://www.argentina.gob.ar/georef
+- **Paquete de Apertura** — https://www.argentina.gob.ar/paquete-de-apertura (estándares OD)
+- **datosgobar (GitHub)** — https://github.com/datosgobar (herramientas oficiales)
+- **DINE / argentina.gob.ar** — resultados electorales provisorios
+- **datos.salud.gob.ar** — DEIS, REFES, DICEI vacunación
+- **data.educacion.gob.ar** — padrón establecimientos educativos
+- **argentinadatos** — https://argentinadatos.com/docs/ (comunidad)
 - **BCRA** — https://api.bcra.gob.ar/
 
 ## Licencia
