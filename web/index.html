@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260518p" />
+<link rel="stylesheet" href="css/app.css?v=20260518q" />
 </head>
 <body>
 <div id="layout">
@@ -310,6 +310,27 @@
       <div class="legend-ramp" id="legend-ramp"></div>
       <div class="legend-labels" id="legend-labels"></div>
     </div>
+    <div id="anim" class="hidden">
+      <div class="anim-row">
+        <button id="anim-play" class="anim-btn">▶</button>
+        <select id="anim-cargo">
+          <option value="pres">Presidente</option>
+          <option value="dip">Diputados</option>
+        </select>
+        <select id="anim-coal">
+          <option value="pj_pct">% Peronismo</option>
+          <option value="jxc_pct">% JxC</option>
+          <option value="lla_pct">% LLA</option>
+          <option value="izq_pct">% FIT</option>
+          <option value="participacion">Participación</option>
+        </select>
+      </div>
+      <div class="anim-tape">
+        <div id="anim-progress"></div>
+        <div id="anim-labels"></div>
+      </div>
+      <div id="anim-now">Pres. Generales 2015</div>
+    </div>
   </main>
 
   <footer id="botbar">
@@ -323,6 +344,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260518p" type="module"></script>
+<script src="js/app.js?v=20260518q" type="module"></script>
 </body>
 </html>

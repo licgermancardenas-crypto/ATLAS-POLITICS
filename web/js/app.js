@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518p · heatmap correlaciones global + tab Heatmap");
+console.log("[ATLAS] build 20260518q · animación temporal electoral 2015→2023");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1108,6 +1108,9 @@ function populateVarSelect() {
 $("#ds-sel").addEventListener("change", async e => {
   activeDataset = e.target.value;
   populateVarSelect();
+  // Mostrar/ocultar control de animación
+  const isElectoral = /^(20\d\d_)/.test(activeDataset);
+  if (isElectoral) showAnim(); else hideAnim();
   const ds = DATASETS[activeDataset];
   // Si la capa activa no está soportada, saltar a la primera soportada
   if (!ds.levels.includes(activeLevel)) {
@@ -1607,6 +1610,87 @@ async function renderCruce() {
   });
 });
 
+// -- Animación temporal electoral --
+const ANIM_SEQUENCES = {
+  pres: [
+    { ds: "2015_generales", label: "2015 Gen" },
+    { ds: "2015_balotaje",  label: "2015 Bal" },
+    { ds: "2019_paso",      label: "2019 PASO" },
+    { ds: "2019_generales", label: "2019 Gen" },
+    { ds: "2023_generales", label: "2023 Gen" },
+    { ds: "2023_balotaje",  label: "2023 Bal" },
+  ],
+  dip: [
+    { ds: "2017_diputados", label: "2017" },
+    { ds: "2021_diputados", label: "2021" },
+    { ds: "2023_diputados", label: "2023" },
+  ],
+};
+let animTimer = null;
+let animIdx = 0;
+
+function showAnim() { $("#anim").classList.remove("hidden"); renderAnimTape(); }
+function hideAnim() { $("#anim").classList.add("hidden"); stopAnim(); }
+function renderAnimTape() {
+  const cargo = $("#anim-cargo").value;
+  const seq = ANIM_SEQUENCES[cargo];
+  $("#anim-labels").innerHTML = seq.map((s, i) =>
+    `<span data-idx="${i}" class="${i === animIdx ? 'active' : ''}">${s.label}</span>`).join("");
+  $$("#anim-labels span").forEach(el => el.addEventListener("click", () => {
+    stopAnim(); animIdx = +el.dataset.idx; applyAnimStep();
+  }));
+  $("#anim-progress").style.width = `${(animIdx / Math.max(1, seq.length - 1)) * 100}%`;
+}
+async function applyAnimStep() {
+  const cargo = $("#anim-cargo").value;
+  const coal = $("#anim-coal").value;
+  const seq = ANIM_SEQUENCES[cargo];
+  const step = seq[animIdx];
+  if (!step) return;
+  // Cambiar dataset si está soportado
+  if (DATASETS[step.ds]) {
+    activeDataset = step.ds;
+    $("#ds-sel").value = step.ds;
+    populateVarSelect();
+    // Si la variable elegida existe, usarla; si no, default
+    const has = DATASETS[step.ds].vars.some(([k]) => k === coal);
+    activeVar = has ? coal : DATASETS[step.ds].defaultVar;
+    $("#var-sel").value = activeVar;
+    if (!["provincias","departamentos"].includes(activeLevel)) {
+      await setLevel("departamentos", { fit: false });
+    } else {
+      await loadIndicadores(activeLevel);
+      computeStats(activeLevel);
+      restyleActive();
+    }
+  }
+  $("#anim-now").textContent = `${DATASETS[step.ds]?.label || step.ds}  ·  ${activeVar}`;
+  renderAnimTape();
+}
+function stepAnim(forward = true) {
+  const seq = ANIM_SEQUENCES[$("#anim-cargo").value];
+  animIdx = (animIdx + (forward ? 1 : -1) + seq.length) % seq.length;
+  applyAnimStep();
+}
+function playAnim() {
+  if (animTimer) return;
+  $("#anim-play").textContent = "⏸";
+  animTimer = setInterval(() => stepAnim(true), 2200);
+  applyAnimStep();
+}
+function stopAnim() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  $("#anim-play").textContent = "▶";
+}
+function toggleAnim() {
+  if (animTimer) stopAnim();
+  else playAnim();
+}
+
+$("#anim-play").addEventListener("click", toggleAnim);
+$("#anim-cargo").addEventListener("change", () => { animIdx = 0; applyAnimStep(); });
+$("#anim-coal").addEventListener("change", () => applyAnimStep());
+
 // -- Heatmap de correlaciones --
 async function computeHeatmap() {
   const level = $("#hm-level").value;
@@ -2075,6 +2159,8 @@ async function showCountryKpis() {
   populateCruceSelects();
   populateSwingSelects();
   populateModeloSelect();
+  // Mostrar anim si arranca en electoral
+  if (/^(20\d\d_)/.test(activeDataset)) showAnim();
   const fromHash = await loadHash();
   if (!fromHash) await setLevel("pais", { fit: true });
   await showCountryKpis();

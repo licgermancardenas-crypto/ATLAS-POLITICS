@@ -241,6 +241,39 @@ a:hover{text-decoration:underline}
 .legend-ramp{display:flex;height:12px;border-radius:3px;overflow:hidden;margin-bottom:4px}
 .legend-ramp span{flex:1}
 .legend-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+
+#anim{
+  position:absolute;
+  bottom:18px;right:18px;z-index:500;
+  background:rgba(11,15,26,.92);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;color:var(--text);
+  font-size:11px;min-width:240px;
+  box-shadow:0 6px 18px rgba(0,0,0,.5);
+}
+#anim.hidden{display:none}
+#anim .anim-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+#anim select{
+  background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:4px;padding:2px 4px;font-size:11px;
+}
+.anim-btn{
+  background:var(--accent);color:var(--bg);border:none;
+  border-radius:4px;padding:2px 10px;cursor:pointer;font-weight:600;
+}
+.anim-btn:hover{background:var(--accent-2)}
+.anim-tape{
+  position:relative;height:18px;background:var(--bg-2);border-radius:3px;
+  border:1px solid var(--line);overflow:hidden;
+}
+#anim-progress{
+  position:absolute;top:0;left:0;height:100%;
+  background:linear-gradient(to right, transparent, var(--accent));
+  width:0%;transition:width .35s ease;opacity:.4;
+}
+#anim-labels{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;pointer-events:none}
+#anim-labels span{cursor:pointer;pointer-events:auto;padding:0 3px}
+#anim-labels span.active{color:var(--accent-2);font-weight:600}
+#anim-now{font-size:10px;color:var(--muted);text-align:center;margin-top:3px}
 .leaflet-container{background:var(--map-bg);color:var(--text);font-family:inherit}
 .leaflet-control-zoom a{
   background:var(--panel);color:var(--text);border-color:var(--line)
