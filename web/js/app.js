@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518n · minería + pesca · 30 datasets totales");
+console.log("[ATLAS] build 20260518o · pobreza por aglomerado · 31 datasets totales");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -101,6 +101,17 @@ const DATASETS = {
       ["exportaciones_cye_musd", "CyE (M USD)"],
     ],
     defaultVar: "exportaciones_per_capita_usd",
+  },
+  pobreza: {
+    label: "Sociales · Pobreza por aglomerado",
+    year: 2025,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/pobreza_provincia.json`,
+    vars: [
+      ["pobreza_pct", "Pobreza % población"],
+      ["pobreza_vs_nacional", "Δ vs nacional (pp)"],
+    ],
+    defaultVar: "pobreza_pct",
   },
   socio: {
     label: "Sociales · Mortalidad Infantil + Fetal",
@@ -407,7 +418,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","_swing"].map(k => [k, {}]));
+  "mineria","pesca","pobreza","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
