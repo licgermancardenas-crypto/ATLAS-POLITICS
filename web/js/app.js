@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518t · PCA biplot + K-means clustering");
+console.log("[ATLAS] build 20260518u · export PNG + outliers Mahalanobis + más Series API");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1646,10 +1646,7 @@ async function renderCruce() {
 // -- Series API por feature: mapeo región/var → series_id --
 const SERIES_BY_DATASET_REGION = {
   ipc: {
-    // Por provincia → ID de Serie API (IPC Nivel General mensual base dic-2016)
-    // Mapeo región INDEC → IDs
     region_to_id: {
-      gba: "148.3_INIVELGBA_DICI_M_18",     // probable
       pampeana: "145.3_INGPAMANA_DICI_M_15",
       nea: "145.3_INGNEANEA_DICI_M_10",
       noa: "145.3_INGNOANOA_DICI_M_10",
@@ -1657,16 +1654,36 @@ const SERIES_BY_DATASET_REGION = {
       patagonia: "145.3_INGPATNIA_DICI_M_16",
       nacional: "148.3_INIVELNAL_DICI_M_26",
     },
-    label: "IPC Nivel General · serie desde dic-2016",
-    // Provincia → región
+    label: "IPC Nivel General · serie",
     prov_to_region: {
-      "02": "gba", "06": "pampeana", "14": "pampeana", "82": "pampeana",
+      "02": "nacional", "06": "pampeana", "14": "pampeana", "82": "pampeana",
       "30": "pampeana", "42": "pampeana",
       "18": "nea", "22": "nea", "34": "nea", "54": "nea",
       "10": "noa", "38": "noa", "46": "noa", "66": "noa", "86": "noa", "90": "noa",
       "50": "cuyo", "70": "cuyo", "74": "cuyo",
       "26": "patagonia", "58": "patagonia", "62": "patagonia", "78": "patagonia", "94": "patagonia",
     },
+  },
+  empleo: {
+    // Tasa desempleo por aglomerado — todos los principales se mapean al
+    // mismo grupo regional simple
+    region_to_id: {
+      nacional: "45.2_ECTDT_0_T_32",  // tasa desempleo total trimestral EPH
+    },
+    label: "Tasa desempleo nacional · EPH",
+    prov_to_region: Object.fromEntries(
+      ["02","06","10","14","18","22","26","30","34","38","42","46","50","54","58","62","66","70","74","78","82","86","90","94"]
+        .map(c => [c, "nacional"])),
+  },
+  economia: {
+    // Exportaciones totales nacionales · serie
+    region_to_id: {
+      nacional: "175.1_EXPO_TOTAL_0_0_30",
+    },
+    label: "Exportaciones totales Argentina · serie",
+    prov_to_region: Object.fromEntries(
+      ["02","06","10","14","18","22","26","30","34","38","42","46","50","54","58","62","66","70","74","78","82","86","90","94"]
+        .map(c => [c, "nacional"])),
   },
 };
 
@@ -1768,6 +1785,40 @@ function toggleAnim() {
 $("#anim-play").addEventListener("click", toggleAnim);
 $("#anim-cargo").addEventListener("change", () => { animIdx = 0; applyAnimStep(); });
 $("#anim-coal").addEventListener("change", () => applyAnimStep());
+
+// -- Export SVG → PNG --
+function svgToPng(svgEl, filename, scale = 2) {
+  if (!svgEl) return;
+  const xml = new XMLSerializer().serializeToString(svgEl);
+  const vb = svgEl.viewBox.baseVal;
+  const w = (vb?.width || svgEl.clientWidth || 800) * scale;
+  const h = (vb?.height || svgEl.clientHeight || 600) * scale;
+  const blob = new Blob([
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' +
+    (vb?.width || 800) + ' ' + (vb?.height || 600) + '">' +
+    '<rect width="100%" height="100%" fill="#161d2e"/>' +
+    xml.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "") +
+    "</svg>"
+  ], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(b => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, "image/png");
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); alert("Error exportando PNG"); };
+  img.src = url;
+}
 
 // -- K-means clustering territorial --
 const CLUSTER_PRESETS = {
@@ -2067,11 +2118,58 @@ async function renderPCABiplot() {
     });
     el.addEventListener("click", () => zoomToCode(el.dataset.code));
   });
+
+  // Outliers — distancia al centroide de su cluster en espacio estandarizado
+  const clusterMap2 = indicadores._cluster?.departamentos || {};
+  // Calcular centroides en espacio estandarizado
+  const k = +$("#cl-k").value;
+  const centroidsStd = [];
+  for (let c = 0; c < k; c++) {
+    const members = X.filter((_, i) => (clusterMap2[codes[i]]?.cluster ?? -1) === c);
+    if (!members.length) { centroidsStd.push(null); continue; }
+    centroidsStd.push(new Array(dim).fill(0).map((_, j) =>
+      members.reduce((s, r) => s + r[j], 0) / members.length));
+  }
+  const distances = codes.map((code, i) => {
+    const c = clusterMap2[code]?.cluster ?? -1;
+    const ctr = centroidsStd[c];
+    if (!ctr) return { code, name: names[i], dist: 0 };
+    const d = Math.sqrt(X[i].reduce((s, x, j) => s + (x - ctr[j]) ** 2, 0));
+    return { code, name: names[i], dist: d };
+  });
+  distances.sort((a, b) => b.dist - a.dist);
+  const top = distances.slice(0, 10);
+
+  // Lookup ctx (provincia)
+  const ctxOf = (code) => {
+    let ctx = "";
+    layerCache.departamentos.eachLayer(l => {
+      if (l.feature?.properties.codigo_indec === code) ctx = l.feature.properties.provincia || "";
+    });
+    return ctx;
+  };
+  $("#cl-outliers").innerHTML = top.map((o, i) => `
+    <div class="rk-row" data-code="${o.code}">
+      <span class="pos">${i + 1}</span>
+      <span class="nom" title="${o.name}">${o.name} <span class="ctx">${ctxOf(o.code)}</span></span>
+      <span class="val">${o.dist.toFixed(2)} σ</span>
+    </div>`).join("");
+  $$("#cl-outliers .rk-row").forEach(r => {
+    r.addEventListener("click", () => zoomToCode(r.dataset.code));
+  });
 }
 
 $("#cl-run").addEventListener("click", async () => {
   await runCluster();
   await renderPCABiplot();
+});
+
+// Botones de exportación PNG (delegación)
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-export]");
+  if (!btn) return;
+  const svg = $("#" + btn.dataset.export);
+  if (svg) svgToPng(svg, btn.dataset.name || "atlas.png");
 });
 
 // -- Heatmap de correlaciones --
