@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260519d" />
+<link rel="stylesheet" href="css/app.css?v=20260519e" />
 </head>
 <body>
 <div id="layout">
@@ -295,6 +295,11 @@
         <svg id="ser-svg" viewBox="0 0 340 180" preserveAspectRatio="xMidYMid meet"
           style="width:100%;height:auto;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;margin-top:6px"></svg>
         <div class="cruce-hover" id="ser-hover">—</div>
+        <div style="margin-top:6px">
+          <button id="ser-breaks" class="mini">📍 Detectar quiebres de régimen</button>
+          <button id="ser-csv" class="mini">📥 CSV</button>
+        </div>
+        <div id="ser-break-out" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
         <div style="margin-top:10px;font-size:11px">
           <strong>Quick picks:</strong>
           <button class="mini ser-q" data-id="148.3_INIVELNAL_DICI_M_26">IPC Nivel Gral</button>
@@ -423,6 +428,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260519d" type="module"></script>
+<script src="js/app.js?v=20260519e" type="module"></script>
 </body>
 </html>

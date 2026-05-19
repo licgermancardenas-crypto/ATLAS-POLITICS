@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519d · trayectoria temporal + export CSV cluster/LISA");
+console.log("[ATLAS] build 20260519e · breakpoints series + leyenda categórica LISA/cluster");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -728,10 +728,12 @@ function computeStats(level) {
   // Breaks simétricos para swing (alrededor de 0)
   if (isSwingVar(activeVar)) {
     const m = Math.max(Math.abs(vals[0] || 0), Math.abs(vals[vals.length - 1] || 0));
+    // Round to 0.05 (5pp steps) para escala "lógica"
+    const mClean = Math.ceil(m * 20) / 20;
     const ramp = VAR_SCALES.swing;
     breaks = [];
     for (let i = 1; i < ramp.length; i++) {
-      breaks.push(-m + (i / ramp.length) * 2 * m);
+      breaks.push(-mClean + (i / ramp.length) * 2 * mClean);
     }
   } else {
     breaks = quantileBreaks(vals, VAR_SCALES.default.length);
@@ -752,10 +754,35 @@ function computeStats(level) {
 function renderLegend(level) {
   const el = $("#legend");
   if (!activeVar || !breaks.length) { el.classList.add("hidden"); return; }
+  // Para LISA / cluster: leyenda categórica
+  if (paletteName() === "lisa") {
+    el.classList.remove("hidden");
+    $("#legend-title").textContent = `${level} · LISA`;
+    const labels = ["ns", "HH", "LL", "HL", "LH"];
+    $("#legend-ramp").innerHTML = VAR_SCALES.lisa.slice(0, 5).map((c, i) =>
+      `<span style="background:${c};flex:0 0 18%" title="${labels[i]}"></span>`).join("");
+    $("#legend-labels").innerHTML = labels.map(l => `<span>${l}</span>`).join("");
+    return;
+  }
+  if (paletteName() === "cluster") {
+    el.classList.remove("hidden");
+    const k = +($("#cl-k")?.value || 4);
+    $("#legend-title").textContent = `${level} · Clusters (k=${k})`;
+    $("#legend-ramp").innerHTML = VAR_SCALES.cluster.slice(0, k).map((c, i) =>
+      `<span style="background:${c};flex:0 0 ${100/k}%"></span>`).join("");
+    $("#legend-labels").innerHTML = Array.from({length:k}, (_, i) => `<span>C${i+1}</span>`).join("");
+    return;
+  }
   el.classList.remove("hidden");
   $("#legend-title").textContent = `${level} · ${labelFor(activeVar)}`;
-  $("#legend-ramp").innerHTML = VAR_SCALES.default.map(c => `<span style="background:${c}"></span>`).join("");
-  $("#legend-labels").innerHTML = `<span>${fmtVal(levelStats?.min)}</span><span>${fmtVal(levelStats?.max)}</span>`;
+  const ramp = VAR_SCALES[paletteName()] || VAR_SCALES.default;
+  $("#legend-ramp").innerHTML = ramp.map(c => `<span style="background:${c}"></span>`).join("");
+  if (isSwingVar(activeVar) && breaks.length) {
+    const mn = breaks[0], mx = breaks[breaks.length - 1];
+    $("#legend-labels").innerHTML = `<span>${(mn*100).toFixed(1)}pp</span><span>0</span><span>+${(mx*100).toFixed(1)}pp</span>`;
+  } else {
+    $("#legend-labels").innerHTML = `<span>${fmtVal(levelStats?.min)}</span><span>${fmtVal(levelStats?.max)}</span>`;
+  }
 }
 
 function restyleActive() {
@@ -2116,7 +2143,6 @@ async function runCluster() {
   await setLevel("departamentos", { fit: false });
   computeStats("departamentos");
   restyleActive();
-  $("#legend").classList.add("hidden"); // legenda no aplica para categórico
 
   // Resumen por cluster
   const ramp = VAR_SCALES.cluster;
@@ -2540,8 +2566,7 @@ async function runLISA() {
   activeVar = "lisa_cat";
   await setLevel("departamentos", { fit: false });
   restyleActive();
-  // Sin legenda continua para LISA
-  $("#legend").classList.add("hidden");
+  computeStats("departamentos");  // re-trigger legend rendering with cat palette
 
   $("#lisa-stats").innerHTML = `
     <span>n=${n} deptos</span>
@@ -2806,6 +2831,79 @@ $("#ser-q").addEventListener("input", () => {
   serDebounce = setTimeout(() => searchSeries($("#ser-q").value), 280);
 });
 $$(".ser-q").forEach(b => b.addEventListener("click", () => loadSerie(b.dataset.id)));
+
+// Estado de la última serie cargada
+let lastSerie = null;
+
+const _origLoadSerie = loadSerie;
+loadSerie = async function(id) {
+  await _origLoadSerie(id);
+  // Capturar data desde el SVG re-render: hackish — usar fetch directo aquí
+  try {
+    const r = await fetch(`${SERIES_API}/series/?ids=${id}&limit=240&format=json`);
+    const d = await r.json();
+    lastSerie = { id, data: d.data || [], meta: d.meta?.[1] || {} };
+  } catch { lastSerie = null; }
+};
+
+// Find the single break point minimizing within-group SSE
+function findBreak(values) {
+  const n = values.length;
+  if (n < 10) return null;
+  const total = values.reduce((a, b) => a + b, 0);
+  const meanAll = total / n;
+  const totalSS = values.reduce((s, v) => s + (v - meanAll) ** 2, 0);
+  let best = -1, bestRed = 0;
+  // Reservar márgenes (al menos 10% en cada lado)
+  const minSeg = Math.max(3, Math.floor(n * 0.1));
+  let sumL = 0;
+  for (let i = 0; i < minSeg - 1; i++) sumL += values[i];
+  for (let i = minSeg - 1; i < n - minSeg; i++) {
+    sumL += values[i];
+    const sumR = total - sumL;
+    const meanL = sumL / (i + 1);
+    const meanR = sumR / (n - i - 1);
+    let ssL = 0, ssR = 0;
+    for (let j = 0; j <= i; j++) ssL += (values[j] - meanL) ** 2;
+    for (let j = i + 1; j < n; j++) ssR += (values[j] - meanR) ** 2;
+    const reduction = totalSS - (ssL + ssR);
+    if (reduction > bestRed) { bestRed = reduction; best = i; }
+  }
+  return best > 0 ? { idx: best, reduction: bestRed, totalSS } : null;
+}
+
+function detectBreaks() {
+  if (!lastSerie?.data?.length) { $("#ser-break-out").textContent = "Cargá una serie primero"; return; }
+  const data = lastSerie.data;
+  const values = data.map(p => +p[1]).filter(v => isFinite(v));
+  const result = findBreak(values);
+  if (!result) { $("#ser-break-out").textContent = "Sin quiebre significativo detectado"; return; }
+  const meanL = values.slice(0, result.idx + 1).reduce((a, b) => a + b, 0) / (result.idx + 1);
+  const meanR = values.slice(result.idx + 1).reduce((a, b) => a + b, 0) / (values.length - result.idx - 1);
+  const dateB = data[result.idx][0];
+  const r2 = (result.reduction / result.totalSS) * 100;
+  // Marcar en el SVG existente
+  const svg = $("#ser-svg");
+  const W = 340, m = { l: 40, r: 10 };
+  const innerW = W - m.l - m.r;
+  const x = m.l + (result.idx / (data.length - 1)) * innerW;
+  const line = `<line x1="${x.toFixed(1)}" y1="8" x2="${x.toFixed(1)}" y2="158"
+    stroke="#ffb454" stroke-width="1.2" stroke-dasharray="3,3"/>
+    <text x="${(x + 3).toFixed(1)}" y="20" fill="#ffb454" font-size="8">${dateB.slice(0,7)}</text>`;
+  svg.innerHTML = svg.innerHTML + line;
+  $("#ser-break-out").innerHTML = `Quiebre detectado en <b>${dateB.slice(0,7)}</b><br>
+    Media antes: ${meanL.toFixed(2)} · Media después: ${meanR.toFixed(2)}
+    <br>Cambio: ${((meanR - meanL) / meanL * 100).toFixed(1)}% · Reducción SSE: ${r2.toFixed(1)}%`;
+}
+
+function exportSerieCSV() {
+  if (!lastSerie?.data?.length) return alert("Cargá una serie primero");
+  const rows = lastSerie.data.map(p => ({ fecha: p[0], valor: p[1] }));
+  downloadCSV(rows, `serie_${lastSerie.id}.csv`);
+}
+
+$("#ser-breaks").addEventListener("click", detectBreaks);
+$("#ser-csv").addEventListener("click", exportSerieCSV);
 
 // -- Comparador --
 const compared = []; // [{code, nombre, level, dataset, ind, ctx}]
