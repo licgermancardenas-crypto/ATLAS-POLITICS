@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518s · K-means clustering territorial multivariado");
+console.log("[ATLAS] build 20260518t · PCA biplot + K-means clustering");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1929,7 +1929,150 @@ async function runCluster() {
     <span>k=${k}</span> <span>${preset.length} vars</span>`;
 }
 
-$("#cl-run").addEventListener("click", runCluster);
+// -- PCA (Power iteration) --
+function matVec(M, v) {
+  return M.map(row => row.reduce((s, x, j) => s + x * v[j], 0));
+}
+function normalize(v) {
+  const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1;
+  return v.map(x => x / n);
+}
+function eigenPower(M, iters = 200) {
+  const n = M.length;
+  let v = new Array(n).fill(0).map(() => Math.random());
+  v = normalize(v);
+  let lambda = 0;
+  for (let i = 0; i < iters; i++) {
+    const w = matVec(M, v);
+    const norm = Math.sqrt(w.reduce((s, x) => s + x * x, 0)) || 1;
+    lambda = norm;
+    v = w.map(x => x / norm);
+  }
+  return { vec: v, val: lambda };
+}
+function pcaTop2(X) {
+  // X: n×p standardized
+  const n = X.length, p = X[0].length;
+  // Covarianza p×p
+  const cov = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let a = 0; a < p; a++) {
+      for (let b = 0; b < p; b++) cov[a][b] += X[i][a] * X[i][b];
+    }
+  }
+  for (let a = 0; a < p; a++) for (let b = 0; b < p; b++) cov[a][b] /= (n - 1);
+  // PC1
+  const pc1 = eigenPower(cov);
+  // Deflate: cov' = cov - λ v vᵀ
+  const cov2 = cov.map((row, a) => row.map((x, b) => x - pc1.val * pc1.vec[a] * pc1.vec[b]));
+  const pc2 = eigenPower(cov2);
+  // Varianza explicada (suma de eigenvalues = traza = p ya que X estandarizado)
+  const totalVar = p;
+  return {
+    pc1: pc1.vec, pc2: pc2.vec,
+    var1: pc1.val / totalVar,
+    var2: pc2.val / totalVar,
+  };
+}
+
+function projectPCA(X, pc1, pc2) {
+  return X.map(row => [
+    row.reduce((s, x, j) => s + x * pc1[j], 0),
+    row.reduce((s, x, j) => s + x * pc2[j], 0),
+  ]);
+}
+
+async function renderPCABiplot() {
+  const preset = CLUSTER_PRESETS[$("#cl-preset").value];
+  const dsSet = new Set(preset.map(([ds]) => ds));
+  for (const ds of dsSet) await loadIndicadores("departamentos", ds);
+  const getVal = (ds, key, code) => indicadores[ds]?.departamentos?.[code]?.[key];
+  const layer = layerCache.departamentos;
+  const allCodes = new Set();
+  if (layer) layer.eachLayer(l => { const p = l.feature?.properties; if (p?.codigo_indec) allCodes.add(p.codigo_indec); });
+  const codes = []; const X = []; const names = [];
+  for (const code of allCodes) {
+    const row = preset.map(([ds, key]) => {
+      const v = getVal(ds, key, code);
+      return v == null || !isFinite(v) ? null : +v;
+    });
+    if (row.every(v => v != null)) {
+      codes.push(code); X.push(row);
+      let nm = code;
+      layer.eachLayer(l => { if (l.feature?.properties.codigo_indec === code) nm = l.feature.properties.nombre; });
+      names.push(nm);
+    }
+  }
+  if (X.length < 20) { $("#pca-svg").innerHTML = ""; return; }
+
+  // Estandarizar
+  const dim = X[0].length;
+  for (let j = 0; j < dim; j++) {
+    const col = X.map(r => r[j]);
+    const m = col.reduce((a, b) => a + b, 0) / col.length;
+    const sd = Math.sqrt(col.reduce((a, b) => a + (b - m) ** 2, 0) / col.length) || 1;
+    for (let i = 0; i < X.length; i++) X[i][j] = (X[i][j] - m) / sd;
+  }
+
+  // PCA
+  const { pc1, pc2, var1, var2 } = pcaTop2(X);
+  const points2D = projectPCA(X, pc1, pc2);
+
+  // Render biplot SVG
+  const W = 360, H = 320, m = { l: 30, r: 10, t: 10, b: 30 };
+  const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
+  const xs = points2D.map(p => p[0]), ys = points2D.map(p => p[1]);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const xRng = (xmax - xmin) || 1, yRng = (ymax - ymin) || 1;
+  const sx = v => m.l + ((v - xmin) / xRng) * innerW;
+  const sy = v => m.t + innerH - ((v - ymin) / yRng) * innerH;
+
+  // Cluster colors
+  const clusterMap = indicadores._cluster?.departamentos || {};
+  const ramp = VAR_SCALES.cluster;
+  const dots = points2D.map((p, i) => {
+    const c = clusterMap[codes[i]]?.cluster ?? 0;
+    return `<circle cx="${sx(p[0]).toFixed(1)}" cy="${sy(p[1]).toFixed(1)}" r="3"
+      fill="${ramp[c % ramp.length]}" fill-opacity="0.7" stroke="${ramp[c % ramp.length]}" stroke-width="0.5"
+      class="pca-pt" data-code="${codes[i]}" data-name="${names[i]}" data-x="${p[0].toFixed(2)}" data-y="${p[1].toFixed(2)}"/>`;
+  }).join("");
+
+  // Loadings (variables como flechas)
+  const scale = 0.85 * Math.min(innerW, innerH) / 2;
+  const cx = m.l + innerW / 2, cy = m.t + innerH / 2;
+  const arrows = preset.map(([_, _key, lbl], j) => {
+    const ax = pc1[j] * scale, ay = pc2[j] * scale;
+    const x2 = cx + ax, y2 = cy - ay;
+    return `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+      stroke="#ffb454" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" fill="#ffb454" font-size="9"
+        dx="3" dy="3">${lbl.substring(0, 18)}</text>`;
+  }).join("");
+
+  $("#pca-svg").innerHTML = `
+    <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#ffb454"/></marker></defs>
+    <line x1="${m.l}" y1="${cy.toFixed(1)}" x2="${m.l+innerW}" y2="${cy.toFixed(1)}" stroke="#222b41" stroke-width="0.5"/>
+    <line x1="${cx.toFixed(1)}" y1="${m.t}" x2="${cx.toFixed(1)}" y2="${m.t+innerH}" stroke="#222b41" stroke-width="0.5"/>
+    ${dots}
+    ${arrows}
+    <text x="${m.l+innerW}" y="${H-8}" fill="#8893ad" font-size="10" text-anchor="end">PC1 (${(var1*100).toFixed(1)}%)</text>
+    <text x="${m.l+4}" y="${m.t+10}" fill="#8893ad" font-size="10">PC2 (${(var2*100).toFixed(1)}%)</text>
+  `;
+
+  $$(".pca-pt").forEach(el => {
+    el.addEventListener("mouseenter", () => {
+      $("#pca-hover").textContent = `${el.dataset.name} · PC1=${el.dataset.x} · PC2=${el.dataset.y}`;
+    });
+    el.addEventListener("click", () => zoomToCode(el.dataset.code));
+  });
+}
+
+$("#cl-run").addEventListener("click", async () => {
+  await runCluster();
+  await renderPCABiplot();
+});
 
 // -- Heatmap de correlaciones --
 async function computeHeatmap() {
