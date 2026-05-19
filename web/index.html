@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260519b" />
+<link rel="stylesheet" href="css/app.css?v=20260519c" />
 </head>
 <body>
 <div id="layout">
@@ -97,6 +97,7 @@
       <button class="tab" data-tab="heatmap">Heatmap</button>
       <button class="tab" data-tab="cluster">Clusters</button>
       <button class="tab" data-tab="lisa">LISA</button>
+      <button class="tab" data-tab="macro">Macro</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -179,6 +180,21 @@
         </div>
         <div class="cruce-stats" id="mod-stats"></div>
         <div id="mod-coefs"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-macro">
+      <div class="block">
+        <h3>CABA · PBA · Interior</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+          Agregados a las 3 macro-regiones políticas argentinas usando la variable
+          activa del dataset activo.
+        </div>
+        <div class="cruce-controls">
+          <button id="macro-run" class="mini" style="margin-top:6px">Calcular sobre variable activa</button>
+        </div>
+        <div class="cruce-stats" id="macro-stats"></div>
+        <div id="macro-bars"></div>
       </div>
     </section>
 
@@ -405,6 +421,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260519b" type="module"></script>
+<script src="js/app.js?v=20260519c" type="module"></script>
 </body>
 </html>

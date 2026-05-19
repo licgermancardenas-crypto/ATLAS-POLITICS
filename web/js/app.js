@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519b · ficha completa multi-dataset + LISA local");
+console.log("[ATLAS] build 20260519c · macro CABA/PBA/Interior + permalinks extendidos");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1338,6 +1338,16 @@ function syncHash() {
   if (selectedCode) parts.push(`c=${selectedCode}`);
   parts.push(`z=${map.getZoom()}`);
   parts.push(`xy=${c.lat.toFixed(4)},${c.lng.toFixed(4)}`);
+  // Estado de visualizaciones derivadas
+  if (activeDataset === "_swing" && $("#swing-a")?.value) {
+    parts.push(`sw=${$("#swing-a").value},${$("#swing-b").value},${$("#swing-var").value}`);
+  }
+  if (activeDataset === "_cluster" && $("#cl-preset")?.value) {
+    parts.push(`cl=${$("#cl-preset").value},${$("#cl-k").value}`);
+  }
+  if (activeDataset === "_lisa") {
+    parts.push(`li=1`);
+  }
   history.replaceState(null, "", `#${parts.join("&")}`);
 }
 async function loadHash() {
@@ -1354,6 +1364,20 @@ async function loadHash() {
     }
     if (q.l) await setLevel(q.l, { fit: false });
     if (q.c) zoomToCode(q.c);
+    // Re-construir visualizaciones derivadas
+    if (q.sw) {
+      const [a, b, v] = q.sw.split(",");
+      $("#swing-a").value = a; $("#swing-b").value = b; $("#swing-var").value = v;
+      setTimeout(() => applySwing(), 400);
+    }
+    if (q.cl) {
+      const [preset, k] = q.cl.split(",");
+      $("#cl-preset").value = preset; $("#cl-k").value = k;
+      setTimeout(async () => { await runCluster(); await renderPCABiplot(); }, 400);
+    }
+    if (q.li === "1") {
+      setTimeout(() => runLISA(), 400);
+    }
   } finally { suppressHashUpdate = false; }
   return true;
 }
@@ -2419,6 +2443,68 @@ async function runLISA() {
 }
 
 $("#lisa-run").addEventListener("click", runLISA);
+
+// -- Comparativa macro CABA / PBA / Interior --
+async function runMacro() {
+  if (!activeVar || activeDataset.startsWith("_")) {
+    $("#macro-stats").innerHTML = "Elegí un dataset real + variable activa"; return;
+  }
+  $("#macro-stats").innerHTML = "Calculando…";
+  const lvl = "departamentos";
+  await loadIndicadores(lvl, activeDataset);
+  await loadIndicadores(lvl, "censo");
+  const ind = indicadores[activeDataset]?.[lvl] || {};
+  const censo = indicadores.censo?.[lvl] || {};
+
+  const buckets = {
+    caba: { label: "CABA", codes: [], values: [], pop: 0, sum: 0, n: 0 },
+    pba: { label: "PBA", codes: [], values: [], pop: 0, sum: 0, n: 0 },
+    interior: { label: "Interior", codes: [], values: [], pop: 0, sum: 0, n: 0 },
+  };
+  for (const [code, rec] of Object.entries(ind)) {
+    const v = rec?.[activeVar];
+    if (v == null || !isFinite(v)) continue;
+    const provCode = code.substring(0, 2);
+    let bucket = "interior";
+    if (provCode === "02") bucket = "caba";
+    else if (provCode === "06") bucket = "pba";
+    const b = buckets[bucket];
+    b.codes.push(code);
+    b.values.push(+v);
+    const pop = censo[code]?.personas || 0;
+    b.pop += pop;
+    b.sum += +v * pop; // ponderación poblacional
+    b.n++;
+  }
+
+  // Promedios
+  for (const b of Object.values(buckets)) {
+    b.weighted = b.pop ? b.sum / b.pop : null;
+    b.unweighted = b.values.length ? b.values.reduce((a, b) => a + b, 0) / b.values.length : null;
+    b.min = b.values.length ? Math.min(...b.values) : null;
+    b.max = b.values.length ? Math.max(...b.values) : null;
+  }
+
+  const all = [...buckets.caba.values, ...buckets.pba.values, ...buckets.interior.values];
+  const globalMax = Math.max(...all, 1);
+
+  $("#macro-stats").innerHTML = `
+    <span>${labelFor(activeVar)}</span>
+    <span>n=${buckets.caba.n + buckets.pba.n + buckets.interior.n} deptos</span>`;
+  $("#macro-bars").innerHTML = ["caba", "pba", "interior"].map(key => {
+    const b = buckets[key];
+    const w = b.weighted ?? b.unweighted;
+    return `<div class="macro-row ${key}">
+      <div><div class="nm">${b.label}</div><div class="ctx">${b.n} deptos · pop ${fmt.format(Math.round(b.pop/1000))}k</div></div>
+      <div class="bar"><span style="width:${Math.min(100, (w / globalMax) * 100)}%"></span></div>
+      <div>
+        <div class="v">${fmtVal(w, activeVar)}</div>
+        <div class="ctx">simple: ${fmtVal(b.unweighted, activeVar)}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+$("#macro-run").addEventListener("click", runMacro);
 
 // Botones de exportación PNG (delegación)
 document.addEventListener("click", e => {

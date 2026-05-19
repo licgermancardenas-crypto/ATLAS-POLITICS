@@ -175,6 +175,20 @@ a:hover{text-decoration:underline}
 .cmp-rm{cursor:pointer;color:var(--muted);margin-left:4px}
 .cmp-rm:hover{color:var(--danger)}
 
+#macro-bars{display:flex;flex-direction:column;gap:8px}
+.macro-row{
+  display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:center;
+  font-size:12px;padding:6px 8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+}
+.macro-row .nm{color:var(--text);font-weight:500}
+.macro-row .ctx{color:var(--muted);font-size:10px}
+.macro-row .bar{height:8px;background:var(--bg-2);border-radius:2px;overflow:hidden}
+.macro-row .bar > span{display:block;height:100%;background:var(--accent);border-radius:2px}
+.macro-row .v{color:var(--accent-2);font-variant-numeric:tabular-nums;font-weight:600}
+.macro-row.caba .bar > span{background:#5aa3ff}
+.macro-row.pba .bar > span{background:#ff6b6b}
+.macro-row.interior .bar > span{background:#7df2c6}
+
 #cl-temporal-out{font-size:11px;display:flex;flex-direction:column;gap:6px}
 .tt-mat{display:grid;gap:1px;background:var(--line);padding:1px;border-radius:4px;font-size:10px}
 .tt-mat > div{background:var(--bg-2);padding:3px;text-align:center;font-variant-numeric:tabular-nums}
