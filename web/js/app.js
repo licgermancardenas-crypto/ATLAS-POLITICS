@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519s · servicios habit. + tabla presupuesto en Dashboard");
+console.log("[ATLAS] build 20260519t · importaciones + balanza comercial nacional");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -2597,6 +2597,31 @@ async function renderDashboard() {
     const data = await r.json();
     const last = data[data.length - 1];
     cards.push({ label: "Inflación interanual", val: `${last.valor}%`, meta: last.fecha });
+  } catch {}
+  // Comercio exterior
+  try {
+    const r = await fetch("../data/web/comercio_exterior.json");
+    if (r.ok) {
+      const d = await r.json();
+      const exp = d.total_expo_musd / 1000;
+      const imp = d.total_impo_musd / 1000;
+      const sa = d.saldo_total_musd / 1000;
+      cards.push({
+        label: `Exportaciones ${d.year}`,
+        val: `US$ ${fmt1.format(exp)}B`,
+        meta: "datos parciales por destino",
+      });
+      cards.push({
+        label: `Importaciones ${d.year}`,
+        val: `US$ ${fmt1.format(imp)}B`,
+        meta: "",
+      });
+      cards.push({
+        label: `Saldo comercial ${d.year}`,
+        val: `${sa >= 0 ? '+' : ''}US$ ${fmt1.format(sa)}B`,
+        meta: sa >= 0 ? "Superávit" : "Déficit",
+      });
+    }
   } catch {}
   // Presupuesto Nacional
   try {
