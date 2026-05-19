@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260519j" />
+<link rel="stylesheet" href="css/app.css?v=20260519k" />
 </head>
 <body>
 <div id="layout">
@@ -90,6 +90,7 @@
 
   <aside id="side">
     <div class="tabs">
+      <button class="tab" data-tab="dash">Dashboard</button>
       <button class="tab active" data-tab="info">Territorio</button>
       <button class="tab" data-tab="ranking">Ranking</button>
       <button class="tab" data-tab="cruce">Cruce</button>
@@ -104,6 +105,30 @@
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
+
+    <section class="panel" id="panel-dash">
+      <div class="block">
+        <h3>Estado de Argentina · resumen país</h3>
+        <div class="dash-grid" id="dash-grid"></div>
+      </div>
+      <div class="block">
+        <h3>Top provincias</h3>
+        <div class="cruce-controls">
+          <label>Variable <select id="dash-var">
+            <option value="personas">Población</option>
+            <option value="densidad_km2">Densidad</option>
+            <option value="lla_pct">% LLA 2023</option>
+            <option value="pj_pct">% PJ 2023</option>
+            <option value="desempleo">Desempleo</option>
+            <option value="pobreza_pct">Pobreza</option>
+            <option value="mortalidad_infantil">Mortalidad infantil</option>
+            <option value="exportaciones_per_capita_usd">Exportaciones/cápita</option>
+          </select></label>
+          <button id="dash-rank" class="mini" style="margin-top:6px">Ranking</button>
+        </div>
+        <div id="dash-rank-out" class="rk"></div>
+      </div>
+    </section>
 
     <section class="panel active" id="panel-info">
       <h2 id="sel-name">Argentina</h2>
@@ -469,6 +494,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260519j" type="module"></script>
+<script src="js/app.js?v=20260519k" type="module"></script>
 </body>
 </html>

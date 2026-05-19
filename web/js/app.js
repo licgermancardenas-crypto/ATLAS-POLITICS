@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519j · top-5 similares + print PDF report");
+console.log("[ATLAS] build 20260519k · Dashboard nacional + rank rápido por variable");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1356,6 +1356,7 @@ function switchTab(name) {
   if (name === "series") {
     if (!$("#ser-svg").innerHTML.trim()) loadSerie("148.3_INIVELNAL_DICI_M_26");
   }
+  if (name === "dash" && !$("#dash-grid").innerHTML.trim()) renderDashboard();
   if (name === "heatmap" && !$("#hm-svg").innerHTML.trim()) {
     // No auto-compute (es pesado). El usuario hace click en "Calcular".
   }
@@ -2438,6 +2439,109 @@ $("#cl-run").addEventListener("click", async () => {
   await runCluster();
   await renderPCABiplot();
 });
+
+// -- Dashboard nacional --
+async function renderDashboard() {
+  const grid = $("#dash-grid");
+  grid.innerHTML = "<div style='color:var(--muted);font-size:11px'>Cargando…</div>";
+
+  // Pull datos nacionales / agregados
+  const cards = [];
+  // Censo país totales
+  const pais = await loadIndicadores("pais", "censo");
+  if (pais) {
+    cards.push({ label: "Población", val: fmt.format(pais.personas), meta: "Censo 2022" });
+    cards.push({ label: "Hogares", val: fmt.format(pais.hogares), meta: "Censo 2022" });
+  }
+  // IPC último mes
+  try {
+    const r = await fetch("../data/web/ipc_nacional.json");
+    if (r.ok) {
+      const d = await r.json();
+      const nac = d.regiones?.nacional;
+      if (nac) {
+        cards.push({
+          label: "IPC mensual", val: `${nac.ipc_var_mensual}%`,
+          meta: `Acum 12m: ${nac.ipc_acum_12m}% · ${d.last_date}`,
+        });
+      }
+    }
+  } catch {}
+  // Dolar live
+  try {
+    const r = await fetch("https://api.argentinadatos.com/v1/cotizaciones/dolares");
+    const data = await r.json();
+    const oficial = data.find(d => d.casa === "oficial");
+    const blue = data.find(d => d.casa === "blue");
+    if (oficial) cards.push({ label: "Dólar oficial (venta)", val: fmtMoney.format(oficial.venta), meta: oficial.fecha?.slice(0,10) });
+    if (blue) cards.push({ label: "Dólar blue (venta)", val: fmtMoney.format(blue.venta), meta: oficial && blue ? `gap ${((blue.venta/oficial.venta - 1) * 100).toFixed(0)}%` : "" });
+  } catch {}
+  // Riesgo país
+  try {
+    const r = await fetch("https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais");
+    const data = await r.json();
+    const last = data[data.length - 1];
+    cards.push({ label: "Riesgo país", val: `${fmt.format(last.valor)} pb`, meta: last.fecha });
+  } catch {}
+  // Pobreza nacional
+  try {
+    const r = await fetch("../data/web/pobreza_nacional.json");
+    if (r.ok) {
+      const d = await r.json();
+      cards.push({ label: "Pobreza (personas)", val: `${d.pobres_personas}%`, meta: `Indigencia ${d.indigentes_poblacion}% · ${d.last_date}` });
+    }
+  } catch {}
+  // Inflación interanual del último IPC
+  try {
+    const r = await fetch("https://api.argentinadatos.com/v1/finanzas/indices/inflacionInteranual");
+    const data = await r.json();
+    const last = data[data.length - 1];
+    cards.push({ label: "Inflación interanual", val: `${last.valor}%`, meta: last.fecha });
+  } catch {}
+
+  grid.innerHTML = cards.map(c => `
+    <div class="dash-card">
+      <div class="dash-label">${c.label}</div>
+      <div class="dash-val">${c.val}</div>
+      <div class="dash-meta">${c.meta || ""}</div>
+    </div>`).join("");
+}
+
+async function renderDashRank() {
+  const v = $("#dash-var").value;
+  $("#dash-rank-out").innerHTML = "<div style='color:var(--muted);font-size:11px'>Calculando…</div>";
+  // Buscar el dataset que tenga esta var
+  const targets = [
+    ["censo", v], ["2023_generales", v], ["empleo", v], ["pobreza", v],
+    ["socio", v], ["economia", v],
+  ];
+  let ind = null, ds = null;
+  for (const [d, k] of targets) {
+    const data = await loadIndicadores("provincias", d);
+    if (data && Object.values(data).some(rec => rec?.[k] != null)) {
+      ind = data; ds = d; break;
+    }
+  }
+  if (!ind) { $("#dash-rank-out").innerHTML = "Variable no disponible"; return; }
+  const layer = layerCache.provincias;
+  const nameOf = code => {
+    let nm = code;
+    if (layer) layer.eachLayer(l => { if (l.feature?.properties.codigo_indec === code) nm = l.feature.properties.nombre; });
+    return nm;
+  };
+  const entries = Object.entries(ind).map(([c, d]) => [c, d?.[v]]).filter(([, x]) => x != null && isFinite(x));
+  entries.sort((a, b) => b[1] - a[1]);
+  $("#dash-rank-out").innerHTML = entries.slice(0, 10).map(([c, val], i) => `
+    <div class="rk-row" data-code="${c}">
+      <span class="pos">${i + 1}</span>
+      <span class="nom">${nameOf(c).replace(/^Provincia (de|del) /, "")}</span>
+      <span class="val">${fmtVal(val, v)}</span>
+    </div>`).join("");
+  $$("#dash-rank-out .rk-row").forEach(r => r.addEventListener("click", () => {
+    setLevel("provincias", { fit: false }).then(() => zoomToCode(r.dataset.code));
+  }));
+}
+$("#dash-rank").addEventListener("click", renderDashRank);
 
 // -- Migración de clusters 2019 → 2023 --
 function clusterFor(preset, k) {
