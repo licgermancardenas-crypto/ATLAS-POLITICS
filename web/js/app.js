@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518q · animación temporal electoral 2015→2023");
+console.log("[ATLAS] build 20260518r · sparkline desde Series API por feature regional");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -815,6 +815,25 @@ async function refreshSelectedPanel(props) {
   renderHist(ind);
   renderExtras(ind);
   switchTab("info");
+  // Sparkline desde Series API si el dataset tiene mapping (ej. IPC regional)
+  loadFeatureSerieIfAvailable(code).catch(() => {});
+}
+
+async function loadFeatureSerieIfAvailable(code) {
+  if (!code) return;
+  // Solo provincias por ahora
+  if (selectedLevel !== "provincias" && code.length !== 2) return;
+  const provCode = code.length >= 2 ? code.substring(0, 2) : code;
+  const serie = await loadFeatureSerie(provCode);
+  if (!serie) return;
+  // Append a renderSpark con la nueva serie como secondary
+  const wrap = $("#sel-spark");
+  const existing = wrap.innerHTML;
+  // Solo agregar si no estaba ya
+  if (existing.includes("from-series-api")) return;
+  renderMultiSpark([serie], serie.label);
+  // Marcar
+  wrap.dataset.fromApi = "1";
 }
 
 function renderKpis(ind) {
@@ -1609,6 +1628,51 @@ async function renderCruce() {
     });
   });
 });
+
+// -- Series API por feature: mapeo región/var → series_id --
+const SERIES_BY_DATASET_REGION = {
+  ipc: {
+    // Por provincia → ID de Serie API (IPC Nivel General mensual base dic-2016)
+    // Mapeo región INDEC → IDs
+    region_to_id: {
+      gba: "148.3_INIVELGBA_DICI_M_18",     // probable
+      pampeana: "145.3_INGPAMANA_DICI_M_15",
+      nea: "145.3_INGNEANEA_DICI_M_10",
+      noa: "145.3_INGNOANOA_DICI_M_10",
+      cuyo: "145.3_INGCUYUYO_DICI_M_11",
+      patagonia: "145.3_INGPATNIA_DICI_M_16",
+      nacional: "148.3_INIVELNAL_DICI_M_26",
+    },
+    label: "IPC Nivel General · serie desde dic-2016",
+    // Provincia → región
+    prov_to_region: {
+      "02": "gba", "06": "pampeana", "14": "pampeana", "82": "pampeana",
+      "30": "pampeana", "42": "pampeana",
+      "18": "nea", "22": "nea", "34": "nea", "54": "nea",
+      "10": "noa", "38": "noa", "46": "noa", "66": "noa", "86": "noa", "90": "noa",
+      "50": "cuyo", "70": "cuyo", "74": "cuyo",
+      "26": "patagonia", "58": "patagonia", "62": "patagonia", "78": "patagonia", "94": "patagonia",
+    },
+  },
+};
+
+async function loadFeatureSerie(provCode) {
+  const cfg = SERIES_BY_DATASET_REGION[activeDataset];
+  if (!cfg) return null;
+  const region = cfg.prov_to_region[provCode];
+  if (!region) return null;
+  const id = cfg.region_to_id[region];
+  if (!id) return null;
+  try {
+    const r = await fetch(`${SERIES_API}/series/?ids=${id}&limit=120&format=json`);
+    const d = await r.json();
+    if (!d.data?.length) return null;
+    return {
+      label: `${cfg.label} · ${region.toUpperCase()}`,
+      points: d.data.map(p => ({ x: p[0], y: +p[1] })).filter(p => isFinite(p.y)),
+    };
+  } catch { return null; }
+}
 
 // -- Animación temporal electoral --
 const ANIM_SEQUENCES = {
