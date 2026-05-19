@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518k · egresos PBA + trade bloques económicos · 26 datasets");
+console.log("[ATLAS] build 20260518l · mortalidad fetal DEIS + energía generación · 27 datasets");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -103,15 +103,33 @@ const DATASETS = {
     defaultVar: "exportaciones_per_capita_usd",
   },
   socio: {
-    label: "Sociales · Mortalidad Infantil",
+    label: "Sociales · Mortalidad Infantil + Fetal",
     year: 2024,
     levels: ["provincias"],
     fileFor: () => `../data/web/socio_provincia.json`,
     vars: [
       ["mortalidad_infantil", "Mortalidad infantil (‰)"],
-      ["mortalidad_infantil_vs_pais", "Δ vs país"],
+      ["mortalidad_infantil_vs_pais", "Δ infantil vs país"],
+      ["mortalidad_fetal", "Mortalidad fetal (‰)"],
     ],
     defaultVar: "mortalidad_infantil",
+  },
+  energia: {
+    label: "Economía · Energía generación",
+    year: 2024,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/energia_provincia.json`,
+    vars: [
+      ["energia_potencia_mw", "Potencia instalada (MW)"],
+      ["energia_potencia_per_capita_w", "Potencia per cápita (W)"],
+      ["energia_centrales_count", "Cantidad de centrales"],
+      ["energia_ter_share", "% Térmica"],
+      ["energia_hid_share", "% Hidroeléctrica"],
+      ["energia_ren_share", "% Renovable"],
+      ["energia_nuc_share", "% Nuclear"],
+      ["energia_tecnologia_principal_share", "% tecnología dominante"],
+    ],
+    defaultVar: "energia_potencia_per_capita_w",
   },
   ipc: {
     label: "Economía · IPC por región",
@@ -351,7 +369,7 @@ const indicadores = Object.fromEntries(["censo",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
-  "trade_bloques","egresos_pba","_swing"].map(k => [k, {}]));
+  "trade_bloques","egresos_pba","energia","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;

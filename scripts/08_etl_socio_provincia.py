@@ -35,6 +35,7 @@ RAW.mkdir(parents=True, exist_ok=True)
 CATALOGS.mkdir(parents=True, exist_ok=True)
 
 URL_MORT = "https://datos.salud.gob.ar/dataset/2eff770c-1c2b-4a22-9281-c3b5e9412086/resource/c1253897-d507-41f7-a3e1-6ed756e7243b/download/tasa-mortalidad-infantil-deis-1990-2023.csv"
+URL_FETAL = "http://datos.salud.gob.ar/dataset/7fd3f531-9aeb-45ea-9395-cfcc4af61515/resource/8e1b9165-aa43-4a7f-8753-ee38ad52b8a8/download/tasa-mortalidad-fetal-total-deis-2006-2023.csv"
 
 # Slug nombre→código INDEC provincia
 PROV_SLUG_TO_INDEC = {
@@ -111,10 +112,43 @@ def process_mortalidad() -> tuple[dict[str, dict], int]:
     return out, last_year
 
 
+def process_fetal() -> tuple[dict[str, dict], int]:
+    csv = download(URL_FETAL, "mortalidad_fetal.csv")
+    df = pd.read_csv(csv)
+    df["year"] = pd.to_datetime(df["indice_tiempo"], dayfirst=True).dt.year
+    last_year = int(df["year"].max())
+    print(f"[fetal] último año: {last_year}")
+    last_row = df[df["year"] == last_year].iloc[0]
+
+    out: dict[str, dict] = {}
+    for prov_slug, code in PROV_SLUG_TO_INDEC.items():
+        col = f"mortalidad_fetal_total_{prov_slug}"
+        if col not in df.columns:
+            continue
+        v = last_row.get(col)
+        if pd.notna(v):
+            out[code] = {
+                "mortalidad_fetal": float(v),
+                "mortalidad_fetal_year": last_year,
+            }
+            # Serie
+            serie = []
+            for _, r in df.iterrows():
+                y = int(r["year"])
+                val = r.get(col)
+                if pd.notna(val):
+                    serie.append([y, float(val)])
+            out[code]["mortalidad_fetal_serie"] = serie
+    return out, last_year
+
+
 def main() -> None:
     socio: dict[str, dict] = {}
     mort, year_mort = process_mortalidad()
     for code, rec in mort.items():
+        socio.setdefault(code, {}).update(rec)
+    fetal, year_fetal = process_fetal()
+    for code, rec in fetal.items():
         socio.setdefault(code, {}).update(rec)
 
     out_path = WEB / "socio_provincia.json"
