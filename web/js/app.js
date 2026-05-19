@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519c · macro CABA/PBA/Interior + permalinks extendidos");
+console.log("[ATLAS] build 20260519d · trayectoria temporal + export CSV cluster/LISA");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -842,6 +842,48 @@ async function refreshSelectedPanel(props) {
   renderAllDatasets(code, selectedLevel).catch(() => {});
   switchTab("info");
   loadFeatureSerieIfAvailable(code).catch(() => {});
+  // Si NO hay serie embebida (sparkline ya renderizado por renderSpark), intentar trayectoria electoral
+  if (!ind || !Object.keys(ind).some(k => k.endsWith("_serie") || k.endsWith("_serie_1ra") || k.endsWith("_serie_12m") || k.startsWith("pba_pres_serie_"))) {
+    renderTrayectoria(code, selectedLevel).catch(() => {});
+  }
+}
+
+async function renderTrayectoria(code, level) {
+  // Construye serie histórica del depto a través de todas las elecciones
+  if (!code || level !== "departamentos") return;
+  const ELECTORAL_YEARS = [
+    { ds: "2015_generales", year: 2015, label: "2015G" },
+    { ds: "2015_balotaje",  year: 2015.5, label: "2015B" },
+    { ds: "2017_diputados", year: 2017, label: "2017D" },
+    { ds: "2019_paso",      year: 2019, label: "2019P" },
+    { ds: "2019_generales", year: 2019.5, label: "2019G" },
+    { ds: "2021_diputados", year: 2021, label: "2021D" },
+    { ds: "2023_generales", year: 2023, label: "2023G" },
+    { ds: "2023_balotaje",  year: 2023.5, label: "2023B" },
+    { ds: "2023_diputados", year: 2023.7, label: "2023D" },
+  ];
+  const COALICIONES = ["pj_pct", "jxc_pct", "lla_pct", "izq_pct"];
+  // Load all
+  await Promise.all(ELECTORAL_YEARS.map(y => loadIndicadores("departamentos", y.ds)));
+  const series = {};
+  for (const c of COALICIONES) series[c] = [];
+  for (const y of ELECTORAL_YEARS) {
+    const rec = indicadores[y.ds]?.departamentos?.[code];
+    if (!rec) continue;
+    for (const c of COALICIONES) {
+      if (rec[c] != null && isFinite(rec[c])) {
+        series[c].push({ x: y.label, y: rec[c] * 100, year: y.year });
+      }
+    }
+  }
+  // Si no hay datos, salir
+  const hasData = Object.values(series).some(s => s.length >= 2);
+  if (!hasData) return;
+
+  const renderable = COALICIONES.filter(c => series[c].length >= 2).map(c => ({
+    label: c.replace("_pct", ""), points: series[c],
+  }));
+  renderMultiSpark(renderable, "Trayectoria electoral 2015-2023");
 }
 
 async function renderAllDatasets(code, level) {
@@ -1006,7 +1048,11 @@ function renderSpark(ind) {
 
 function renderMultiSpark(series, title) {
   const wrap = $("#sel-spark");
-  const palette = { pj: "#ff6b6b", jxc: "#5aa3ff", lla: "#b288e8", izq: "#fceabb", hacemos: "#7df2c6", una_massa: "#ffb454", "": "#5aa3ff" };
+  const palette = {
+    pj: "#ff6b6b", jxc: "#5aa3ff", lla: "#b288e8", izq: "#fceabb",
+    hacemos: "#7df2c6", una_massa: "#ffb454", "1pais": "#ed8da0",
+    cf: "#74c0e8", nos: "#c9a8ff", vcv: "#ffb454", "": "#5aa3ff",
+  };
   const W = 320, H = 60, m = { l: 4, r: 4, t: 4, b: 4 };
   const innerW = W - m.l - m.r, innerH = H - m.t - m.b;
   // Eje X común
@@ -1846,6 +1892,68 @@ $("#anim-play").addEventListener("click", toggleAnim);
 $("#anim-cargo").addEventListener("change", () => { animIdx = 0; applyAnimStep(); });
 $("#anim-coal").addEventListener("change", () => applyAnimStep());
 
+// -- Export CSV genérico (data como [{...}, ...]) --
+function downloadCSV(rows, filename) {
+  if (!rows.length) return alert("Sin datos para exportar");
+  const cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  const lines = [cols.join(",")];
+  for (const r of rows) {
+    const row = cols.map(c => {
+      const v = r[c];
+      if (v == null) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    });
+    lines.push(row.join(","));
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function exportClusterCSV() {
+  const ass = indicadores._cluster?.departamentos;
+  if (!ass) return alert("Primero ejecutá k-means");
+  const layer = layerCache.departamentos;
+  const rows = [];
+  if (layer) layer.eachLayer(l => {
+    const p = l.feature?.properties;
+    if (p?.codigo_indec && ass[p.codigo_indec]) {
+      rows.push({
+        codigo_indec: p.codigo_indec,
+        nombre: p.nombre, provincia: p.provincia || "",
+        cluster: ass[p.codigo_indec].cluster,
+      });
+    }
+  });
+  downloadCSV(rows, "atlas_clusters.csv");
+}
+
+function exportLISACSV() {
+  const ass = indicadores._lisa?.departamentos;
+  if (!ass) return alert("Primero ejecutá LISA");
+  const layer = layerCache.departamentos;
+  const labels = { 1: "HH", 2: "LL", 3: "HL", 4: "LH", 0: "ns" };
+  const rows = [];
+  if (layer) layer.eachLayer(l => {
+    const p = l.feature?.properties;
+    if (p?.codigo_indec && ass[p.codigo_indec]) {
+      const r = ass[p.codigo_indec];
+      rows.push({
+        codigo_indec: p.codigo_indec,
+        nombre: p.nombre, provincia: p.provincia || "",
+        lisa_cat: labels[r.lisa_cat] || r.lisa_cat,
+        z: r.lisa_zi, z_lag: r.lisa_zlag, Ii: r.lisa_Ii,
+      });
+    }
+  });
+  downloadCSV(rows, "atlas_lisa.csv");
+}
+
 // -- Export SVG → PNG --
 function svgToPng(svgEl, filename, scale = 2) {
   if (!svgEl) return;
@@ -2348,6 +2456,8 @@ async function runTemporalClusters() {
 }
 
 $("#cl-temporal").addEventListener("click", runTemporalClusters);
+$("#cl-csv").addEventListener("click", exportClusterCSV);
+$("#lisa-csv").addEventListener("click", exportLISACSV);
 
 // -- LISA · Local Indicators of Spatial Association --
 function knnByCentroid(layer, k = 8) {
