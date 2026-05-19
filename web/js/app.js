@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519f · tema claro/oscuro + heatmap ΔR 2019→2023");
+console.log("[ATLAS] build 20260519g · modo presentación + bookmarks de vistas");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -3229,6 +3229,65 @@ $("#theme-toggle").addEventListener("click", () => {
 // Restore from localStorage
 const savedTheme = localStorage.getItem(themeKey);
 if (savedTheme === "light") setTimeout(() => applyTheme("light"), 200);
+
+// Modo presentación
+$("#present-toggle").addEventListener("click", () => {
+  document.body.classList.toggle("present");
+  setTimeout(() => map.invalidateSize(), 100);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.body.classList.contains("present")) {
+    document.body.classList.remove("present");
+    setTimeout(() => map.invalidateSize(), 100);
+  }
+});
+
+// Bookmarks
+const BM_KEY = "atlas-bookmarks";
+function loadBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BM_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveBookmarks(list) { localStorage.setItem(BM_KEY, JSON.stringify(list)); }
+function renderBookmarks() {
+  const list = loadBookmarks();
+  const el = $("#bm-list");
+  if (!list.length) { el.innerHTML = `<div style="color:var(--muted)">Sin bookmarks. Configurá una vista y guardala.</div>`; return; }
+  el.innerHTML = list.map((b, i) => `
+    <div class="bm-item">
+      <span class="bm-name" data-i="${i}">${b.name}</span>
+      <span style="color:var(--muted);font-size:10px">${b.hash.length} ch</span>
+      <span class="bm-rm" data-i="${i}">✕</span>
+    </div>`).join("");
+  $$("#bm-list .bm-name").forEach(el => el.addEventListener("click", () => {
+    const b = loadBookmarks()[+el.dataset.i];
+    if (b) { location.hash = b.hash; location.reload(); }
+  }));
+  $$("#bm-list .bm-rm").forEach(el => el.addEventListener("click", () => {
+    const list = loadBookmarks();
+    list.splice(+el.dataset.i, 1);
+    saveBookmarks(list);
+    renderBookmarks();
+  }));
+}
+$("#bookmark-btn").addEventListener("click", () => {
+  $("#bookmarks-pop").classList.toggle("hidden");
+  renderBookmarks();
+});
+$("#bm-save").addEventListener("click", () => {
+  syncHash();
+  const name = prompt("Nombre del bookmark", "Vista " + (loadBookmarks().length + 1));
+  if (!name) return;
+  const list = loadBookmarks();
+  list.push({ name, hash: location.hash.slice(1) });
+  saveBookmarks(list);
+  renderBookmarks();
+});
+document.addEventListener("click", e => {
+  if (!$("#bookmarks-pop").contains(e.target) && e.target.id !== "bookmark-btn") {
+    $("#bookmarks-pop").classList.add("hidden");
+  }
+});
 
 // -- Init --
 async function showCountryKpis() {

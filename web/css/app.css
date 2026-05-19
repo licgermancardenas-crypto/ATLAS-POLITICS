@@ -367,6 +367,31 @@ a:hover{text-decoration:underline}
 }
 .lbl-toggle:hover{border-color:var(--accent)}
 
+body.present #side,
+body.present #topbar,
+body.present #botbar{display:none}
+body.present #layout{grid-template-columns:1fr;grid-template-rows:1fr;grid-template-areas:"map"}
+body.present #anim,body.present #legend{z-index:1000}
+
+#bookmarks-pop{
+  position:absolute;top:60px;right:18px;z-index:1500;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:10px;color:var(--text);
+  font-size:11px;min-width:260px;max-height:400px;overflow-y:auto;
+  box-shadow:0 6px 18px rgba(0,0,0,.5);
+}
+#bookmarks-pop.hidden{display:none}
+#bookmarks-pop .bm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px}
+#bookmarks-pop .bm-head strong{color:var(--accent-2)}
+.bm-item{
+  display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center;
+  padding:5px 6px;border-radius:4px;background:var(--bg-2);border:1px solid var(--line);
+  margin-bottom:4px;
+}
+.bm-item .bm-name{cursor:pointer;color:var(--accent);font-size:11px}
+.bm-item .bm-name:hover{color:var(--accent-2)}
+.bm-item .bm-rm{color:var(--danger);cursor:pointer;padding:0 4px;font-size:12px}
+
 #botbar{
   grid-area:bot;
   display:flex;align-items:center;gap:8px;

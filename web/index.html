@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260519f" />
+<link rel="stylesheet" href="css/app.css?v=20260519g" />
 </head>
 <body>
 <div id="layout">
@@ -82,6 +82,8 @@
       <select id="var-sel"></select>
     </div>
     <button id="theme-toggle" class="lbl-toggle" title="Cambiar tema">🌙</button>
+    <button id="present-toggle" class="lbl-toggle" title="Modo presentación (Esc para salir)">⛶</button>
+    <button id="bookmark-btn" class="lbl-toggle" title="Bookmarks de vistas">★</button>
     <button id="lbl-toggle" class="lbl-toggle">🏷️ Nombres on</button>
     <div class="status" id="status">Cargando…</div>
   </header>
@@ -419,6 +421,14 @@
     </div>
   </main>
 
+  <div id="bookmarks-pop" class="hidden">
+    <div class="bm-head">
+      <strong>Bookmarks</strong>
+      <button id="bm-save" class="mini">Guardar vista actual</button>
+    </div>
+    <div id="bm-list"></div>
+  </div>
+
   <footer id="botbar">
     <span id="hover-name">—</span>
     <span class="sep">·</span>
@@ -430,6 +440,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260519f" type="module"></script>
+<script src="js/app.js?v=20260519g" type="module"></script>
 </body>
 </html>
