@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519m · GitHub Actions weekly refresh + mobile UX");
+console.log("[ATLAS] build 20260519n · más Series API + outliers en ranking");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -1211,12 +1211,19 @@ function renderRanking() {
     });
     return ctx;
   };
-  const renderList = (list) => list.map(([code, v], i) => `
-    <div class="rk-row ${code === selectedCode ? 'sel' : ''}" data-code="${code}">
+  // Z-score absoluto para marcar outliers
+  const mean = levelStats.mean, sd = Math.sqrt(
+    levelStats.entries.reduce((s, [, v]) => s + (v - mean) ** 2, 0) / levelStats.entries.length) || 1;
+  const renderList = (list) => list.map(([code, v], i) => {
+    const z = Math.abs((v - mean) / sd);
+    const outlier = z > 2 ? "rk-outlier" : "";
+    const badge = z > 2.5 ? `<span class="rk-badge" title="z=${z.toFixed(1)}">σ+</span>` : "";
+    return `<div class="rk-row ${outlier} ${code === selectedCode ? 'sel' : ''}" data-code="${code}">
       <span class="pos">${i + 1}</span>
-      <span class="nom" title="${nameOf(code)}">${nameOf(code)} <span class="ctx">${ctxOf(code)}</span></span>
-      <span class="val">${fmtVal(v)}</span>
-    </div>`).join("");
+      <span class="nom" title="${nameOf(code)} (z=${z.toFixed(2)})">${nameOf(code)} <span class="ctx">${ctxOf(code)}</span></span>
+      <span class="val">${fmtVal(v)} ${badge}</span>
+    </div>`;
+  }).join("");
   top.innerHTML = renderList(sorted.slice(0, 10));
   bot.innerHTML = renderList(sorted.slice(-10).reverse());
   $$(".rk-row", $("#panel-ranking")).forEach(r => {
