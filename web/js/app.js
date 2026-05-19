@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519n · más Series API + outliers en ranking");
+console.log("[ATLAS] build 20260519o · circuitos electorales PBA (1.150 polígonos)");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -13,6 +13,7 @@ const LEVELS = {
   municipios:    { file: "../data/web/municipios.geojson",    weight: 0.5, color: "#ff6b6b", fill: 0.10, zMin: 9,  zMax: 11 },
   localidades:   { file: "../data/web/localidades.geojson",   weight: 0,   color: "#c9a8ff", fill: 1.00, zMin: 9,  zMax: 12, point: true },
   radios:        { dir: "../data/web/radios",                 weight: 0.3, color: "#5aa3ff", fill: 0.12, zMin: 12, zMax: 20, lazyByProv: true },
+  circuitos_pba: { file: "../data/web/pba_circuitos.geojson", weight: 0.4, color: "#b288e8", fill: 0.12, zMin: 9,  zMax: 14 },
 };
 
 const VAR_SCALES = {
@@ -91,6 +92,21 @@ const DATASETS = {
   "2023_balotaje":   makeElectoralDS("Presidente 2023 · Balotaje",   "2023_balotaje",   ["lla","pj"], 2023),
   "2023_diputados":  makeElectoralDS("Diputados Nac. 2023",          "2023_diputados",  ["lla","pj","jxc","hacemos","izq"], 2023),
   "2023_senadores":  makeElectoralDS("Senadores Nac. 2023 (8 prov.)", "2023_senadores", ["lla","pj","jxc","hacemos","izq"], 2023),
+  pba_circuitos: {
+    label: "PBA · Pres 2023 por circuito electoral (1.150 circuitos)",
+    year: 2023,
+    levels: ["circuitos_pba"],
+    fileFor: () => `../data/web/elecciones_pba_circuitos.json`,
+    vars: [
+      ["lla_pct", "% LLA"],
+      ["pj_pct", "% UP (PJ)"],
+      ["jxc_pct", "% JxC"],
+      ["hacemos_pct", "% Hacemos"],
+      ["izq_pct", "% FIT"],
+    ],
+    defaultVar: "lla_pct",
+    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+  },
   economia: {
     label: "Economía · Exportaciones 2024",
     year: 2024,
@@ -446,7 +462,8 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","_swing","_cluster","_lisa"].map(k => [k, {}]));
+  "mineria","pesca","pobreza","pba_circuitos",
+  "_swing","_cluster","_lisa"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
