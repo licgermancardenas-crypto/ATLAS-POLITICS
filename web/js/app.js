@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518r · sparkline desde Series API por feature regional");
+console.log("[ATLAS] build 20260518s · K-means clustering territorial multivariado");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -18,6 +18,8 @@ const VAR_SCALES = {
   jxc:     ["#0a1828","#0e2645","#143a6b","#1b539a","#2e76c1","#5995d4","#84b3e0","#b0d0ea","#dbe7f3","#fff"],
   // Diverging para swing: rojo (caída) → gris → verde (suba)
   swing:   ["#7f1d1d","#b91c1c","#dc2626","#ef4444","#f87171","#9ca3af","#86efac","#4ade80","#22c55e","#15803d","#166534"],
+  // Paleta categórica para clusters (no ordinal, hasta 8 grupos)
+  cluster: ["#5aa3ff","#ff6b6b","#7df2c6","#ffb454","#b288e8","#ed8da0","#fceabb","#74c0e8"],
 };
 
 // Helper para construir un dataset electoral con vars dinámicas
@@ -374,7 +376,17 @@ const DATASETS = {
     ],
     defaultVar: "escuelas_por_10k_hab",
   },
-  // Pseudo-dataset para swing — alimentado dinámicamente
+  // Pseudo-dataset para clustering — alimentado dinámicamente
+  _cluster: {
+    label: "Clusters",
+    year: 0,
+    levels: ["departamentos"],
+    fileFor: () => null,
+    vars: [["cluster", "Cluster ID"]],
+    defaultVar: "cluster",
+    paletteFor: () => "cluster",
+    _virtual: true,
+  },
   _swing: {
     label: "Swing",
     year: 0,
@@ -418,7 +430,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","_swing"].map(k => [k, {}]));
+  "mineria","pesca","pobreza","_swing","_cluster"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -446,6 +458,8 @@ function paletteName() {
 function colorFor(v) {
   if (v == null || !isFinite(v) || !activeVar) return null;
   const ramp = VAR_SCALES[paletteName()] || VAR_SCALES.default;
+  // Para cluster (categórico), usar ID directo como índice
+  if (paletteName() === "cluster") return ramp[Math.round(v) % ramp.length];
   if (!breaks.length) return ramp[Math.floor(ramp.length / 2)];
   let i = 0;
   while (i < breaks.length && v > breaks[i]) i++;
@@ -1754,6 +1768,168 @@ function toggleAnim() {
 $("#anim-play").addEventListener("click", toggleAnim);
 $("#anim-cargo").addEventListener("change", () => { animIdx = 0; applyAnimStep(); });
 $("#anim-coal").addEventListener("change", () => applyAnimStep());
+
+// -- K-means clustering territorial --
+const CLUSTER_PRESETS = {
+  electoral: [
+    ["2023_generales", "lla_pct", "% LLA 2023"],
+    ["2023_generales", "pj_pct",  "% PJ 2023"],
+    ["2023_generales", "jxc_pct", "% JxC 2023"],
+    ["2023_generales", "participacion", "Particip. 2023"],
+  ],
+  socioeconomico: [
+    ["censo", "densidad_km2", "Densidad"],
+    ["censo", "personas_por_hogar", "Pers/hogar"],
+    ["censo", "idx_masculinidad", "Índ. masc."],
+    ["salud", "establecimientos_por_10k_hab", "Salud 10k"],
+    ["educacion", "escuelas_por_10k_hab", "Escuelas 10k"],
+    ["socio", "mortalidad_infantil", "Mort. inf."],
+  ],
+  mixto: [
+    ["2023_generales", "lla_pct", "% LLA 2023"],
+    ["2023_generales", "pj_pct", "% PJ 2023"],
+    ["censo", "densidad_km2", "Densidad"],
+    ["censo", "personas_por_hogar", "Pers/hogar"],
+    ["censo", "idx_masculinidad", "Índ. masc."],
+  ],
+  custom: [
+    ["2023_generales", "lla_pct", "% LLA 2023"],
+    ["censo", "personas_por_hogar", "Pers/hogar"],
+  ],
+};
+
+function kmeans(points, k, maxIter = 80) {
+  const n = points.length;
+  if (n < k) return null;
+  const dim = points[0].length;
+  // Init: k-means++ (uno random, resto por probabilidad ∝ distancia²)
+  const centroids = [points[Math.floor(Math.random() * n)].slice()];
+  for (let c = 1; c < k; c++) {
+    const dists = points.map(p => {
+      let min = Infinity;
+      for (const c0 of centroids) {
+        let d = 0;
+        for (let j = 0; j < dim; j++) d += (p[j] - c0[j]) ** 2;
+        if (d < min) min = d;
+      }
+      return min;
+    });
+    const totalD = dists.reduce((a, b) => a + b, 0);
+    let r = Math.random() * totalD, acc = 0, pick = 0;
+    for (let i = 0; i < n; i++) { acc += dists[i]; if (acc >= r) { pick = i; break; } }
+    centroids.push(points[pick].slice());
+  }
+  // Iterate
+  const assign = new Array(n).fill(-1);
+  for (let it = 0; it < maxIter; it++) {
+    let changed = 0;
+    for (let i = 0; i < n; i++) {
+      let best = 0, bestD = Infinity;
+      for (let c = 0; c < k; c++) {
+        let d = 0;
+        for (let j = 0; j < dim; j++) d += (points[i][j] - centroids[c][j]) ** 2;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      if (assign[i] !== best) { assign[i] = best; changed++; }
+    }
+    if (changed === 0) break;
+    for (let c = 0; c < k; c++) {
+      const members = [];
+      for (let i = 0; i < n; i++) if (assign[i] === c) members.push(points[i]);
+      if (!members.length) continue;
+      centroids[c] = new Array(dim).fill(0).map((_, j) =>
+        members.reduce((s, p) => s + p[j], 0) / members.length);
+    }
+  }
+  return { centroids, assign };
+}
+
+async function runCluster() {
+  const preset = CLUSTER_PRESETS[$("#cl-preset").value];
+  const k = +$("#cl-k").value;
+  if (!preset) return;
+  $("#cl-stats").innerHTML = "Cargando datasets…";
+
+  // Cargar indicadores necesarios
+  const dsSet = new Set(preset.map(([ds]) => ds));
+  for (const ds of dsSet) await loadIndicadores("departamentos", ds);
+
+  // Build matrix
+  const getVal = (ds, key, code) => indicadores[ds]?.departamentos?.[code]?.[key];
+  // Universe = códigos con todas las variables presentes
+  const layer = layerCache.departamentos;
+  const allCodes = new Set();
+  if (layer) layer.eachLayer(l => { const p = l.feature?.properties; if (p?.codigo_indec) allCodes.add(p.codigo_indec); });
+  const codes = [];
+  const X = [];
+  for (const code of allCodes) {
+    const row = preset.map(([ds, key]) => {
+      const v = getVal(ds, key, code);
+      return v == null || !isFinite(v) ? null : +v;
+    });
+    if (row.every(v => v != null)) { codes.push(code); X.push(row); }
+  }
+  if (codes.length < 20) { $("#cl-stats").innerHTML = "Pocas obs. completas"; return; }
+
+  // Estandarizar columnas
+  const dim = X[0].length;
+  for (let j = 0; j < dim; j++) {
+    const col = X.map(r => r[j]);
+    const m = col.reduce((a, b) => a + b, 0) / col.length;
+    const sd = Math.sqrt(col.reduce((a, b) => a + (b - m) ** 2, 0) / col.length) || 1;
+    for (let i = 0; i < X.length; i++) X[i][j] = (X[i][j] - m) / sd;
+  }
+
+  // Run
+  const result = kmeans(X, k);
+  if (!result) { $("#cl-stats").innerHTML = "Falló k-means"; return; }
+
+  // Push al dataset virtual
+  const obj = {};
+  codes.forEach((c, i) => { obj[c] = { cluster: result.assign[i] }; });
+  indicadores._cluster.departamentos = obj;
+
+  // Activar
+  activeDataset = "_cluster";
+  $("#ds-sel").value = "_cluster"; // no existe en HTML, no rompe
+  populateVarSelect();
+  activeVar = "cluster";
+  await setLevel("departamentos", { fit: false });
+  computeStats("departamentos");
+  restyleActive();
+  $("#legend").classList.add("hidden"); // legenda no aplica para categórico
+
+  // Resumen por cluster
+  const ramp = VAR_SCALES.cluster;
+  const summary = [];
+  for (let c = 0; c < k; c++) {
+    const members = codes.filter((_, i) => result.assign[i] === c);
+    // Centroide en unidades originales: invertir la estandarización
+    // Lo recalculamos sobre la matriz original (deshacer la transformación es complejo)
+    // En su lugar, mostramos medias originales del cluster
+    const features = preset.map(([ds, key, lbl], j) => {
+      const vals = members.map(code => getVal(ds, key, code)).filter(v => v != null);
+      const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      return [lbl, mean];
+    });
+    summary.push({ c, n: members.length, features });
+  }
+  // Render cards
+  $("#cl-summary").innerHTML = summary.map(s => `
+    <div class="cl-card">
+      <span class="dot" style="background:${ramp[s.c % ramp.length]}"></span>
+      <div>
+        <div style="font-weight:600;color:var(--text)">Cluster ${s.c + 1}</div>
+        <div class="cl-features">${s.features.map(([l, m]) =>
+          `${l}: ${m == null ? '—' : fmt2.format(m)}`).join(' · ')}</div>
+      </div>
+      <span class="cl-n">${s.n}</span>
+    </div>`).join("");
+  $("#cl-stats").innerHTML = `<span>${codes.length} deptos</span>
+    <span>k=${k}</span> <span>${preset.length} vars</span>`;
+}
+
+$("#cl-run").addEventListener("click", runCluster);
 
 // -- Heatmap de correlaciones --
 async function computeHeatmap() {
