@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519g · modo presentación + bookmarks de vistas");
+console.log("[ATLAS] build 20260519h · Sankey clusters + onboarding tour");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -2463,10 +2463,68 @@ async function runTemporalClusters() {
       rows.push(`<div class="${cls}">${mat[r][c] || ""}</div>`);
     }
   }
+  // Sankey SVG
+  const W = 340, H = Math.max(180, k * 36), m = { l: 6, r: 6, t: 10, b: 10 };
+  const colCount = mat.map(row => row.reduce((a, b) => a + b, 0));
+  const rowCount = colCount; // sym since each depto cuenta una vez
+  const total2023 = new Array(k).fill(0);
+  for (let r = 0; r < k; r++) for (let c = 0; c < k; c++) total2023[c] += mat[r][c];
+  const totalAll = colCount.reduce((a, b) => a + b, 0) || 1;
+  const ramp = VAR_SCALES.cluster;
+  // Posiciones Y de los nodos (left=2019, right=2023)
+  const gap = 4;
+  const innerH = H - m.t - m.b - gap * (k - 1);
+  let yL = m.t, yR = m.t;
+  const lefts = [], rights = [];
+  for (let c = 0; c < k; c++) {
+    const hL = (colCount[c] / totalAll) * innerH;
+    lefts.push({ y0: yL, y1: yL + hL, h: hL });
+    yL += hL + gap;
+    const hR = (total2023[c] / totalAll) * innerH;
+    rights.push({ y0: yR, y1: yR + hR, h: hR });
+    yR += hR + gap;
+  }
+  const xL = m.l + 30, xR = W - m.r - 30;
+  // Tracking de offsets dentro de cada nodo izquierdo y derecho
+  const offL = lefts.map(l => l.y0);
+  const offR = rights.map(r => r.y0);
+  const flows = [];
+  for (let r = 0; r < k; r++) {
+    for (let c = 0; c < k; c++) {
+      const cnt = mat[r][c];
+      if (!cnt) continue;
+      const h = (cnt / totalAll) * innerH;
+      const y0a = offL[r], y0b = offL[r] + h;
+      const y1a = offR[c], y1b = offR[c] + h;
+      offL[r] += h; offR[c] += h;
+      const cx1 = xL + 20, cx2 = xR - 20;
+      flows.push(`<path d="M${xL.toFixed(1)},${y0a.toFixed(1)}
+        C${cx1.toFixed(1)},${y0a.toFixed(1)} ${cx2.toFixed(1)},${y1a.toFixed(1)} ${xR.toFixed(1)},${y1a.toFixed(1)}
+        L${xR.toFixed(1)},${y1b.toFixed(1)}
+        C${cx2.toFixed(1)},${y1b.toFixed(1)} ${cx1.toFixed(1)},${y0b.toFixed(1)} ${xL.toFixed(1)},${y0b.toFixed(1)} Z"
+        fill="${ramp[r % ramp.length]}" fill-opacity="${r === c ? 0.45 : 0.25}"
+        stroke="none"><title>C${r+1} → C${c+1}: ${cnt}</title></path>`);
+    }
+  }
+  const nodes = lefts.map((l, i) => `<rect x="${(xL-10).toFixed(1)}" y="${l.y0.toFixed(1)}"
+    width="10" height="${l.h.toFixed(1)}" fill="${ramp[i % ramp.length]}"/>
+    <text x="${(xL-14).toFixed(1)}" y="${(l.y0+l.h/2+3).toFixed(1)}" text-anchor="end" fill="${ramp[i % ramp.length]}" font-size="10" font-weight="600">C${i+1}</text>`).join("")
+    + rights.map((r, i) => `<rect x="${xR.toFixed(1)}" y="${r.y0.toFixed(1)}"
+    width="10" height="${r.h.toFixed(1)}" fill="${ramp[i % ramp.length]}"/>
+    <text x="${(xR+14).toFixed(1)}" y="${(r.y0+r.h/2+3).toFixed(1)}" fill="${ramp[i % ramp.length]}" font-size="10" font-weight="600">C${i+1}</text>`).join("");
+
+  const sankeySVG = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"
+    style="width:100%;height:auto;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;margin-top:8px">
+    <text x="${xL-10}" y="6" fill="#8893ad" font-size="9">2019</text>
+    <text x="${xR+10}" y="6" fill="#8893ad" font-size="9">2023</text>
+    ${flows.join("")}
+    ${nodes}
+  </svg>`;
+
   $("#cl-temporal-out").innerHTML = `
     <div class="tt-mat" style="grid-template-columns:repeat(${k+1},1fr)">${rows.join("")}</div>
-    <div style="color:var(--muted);font-size:10px">Diagonal = quedaron en el mismo cluster.
-    Off-diagonal = migraron entre clusters.</div>
+    ${sankeySVG}
+    <div style="color:var(--muted);font-size:10px">Sankey: flujo proporcional de deptos entre clusters 2019 → 2023.</div>
     <button id="cl-mark-moved" class="mini">Pintar mapa: deptos que migraron</button>`;
 
   $("#cl-mark-moved").addEventListener("click", () => {
@@ -3229,6 +3287,20 @@ $("#theme-toggle").addEventListener("click", () => {
 // Restore from localStorage
 const savedTheme = localStorage.getItem(themeKey);
 if (savedTheme === "light") setTimeout(() => applyTheme("light"), 200);
+
+// Welcome / onboarding
+const WELCOME_KEY = "atlas-welcome-seen";
+function showWelcome() { $("#welcome").classList.remove("hidden"); }
+function closeWelcome() { $("#welcome").classList.add("hidden"); }
+$("#welc-close").addEventListener("click", closeWelcome);
+$("#welc-never").addEventListener("click", () => {
+  localStorage.setItem(WELCOME_KEY, "1");
+  closeWelcome();
+});
+// Mostrar si nunca lo vio y no hay hash (sesión "limpia")
+if (!localStorage.getItem(WELCOME_KEY) && !location.hash) {
+  setTimeout(showWelcome, 1200);
+}
 
 // Modo presentación
 $("#present-toggle").addEventListener("click", () => {

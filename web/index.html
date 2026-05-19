@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260519g" />
+<link rel="stylesheet" href="css/app.css?v=20260519h" />
 </head>
 <body>
 <div id="layout">
@@ -421,6 +421,27 @@
     </div>
   </main>
 
+  <div id="welcome" class="hidden">
+    <div class="welc-box">
+      <h2>ATLAS politics</h2>
+      <p style="color:var(--muted);font-size:13px;margin:6px 0 14px">
+        Plataforma analítica de Argentina — geografía, demografía, electoral, economía, sociales.
+      </p>
+      <ul class="welc-list">
+        <li><b>Mapa</b>: hacé click en cualquier provincia, depto o municipio para ver sus datos.</li>
+        <li><b>Datasets</b>: usá el selector arriba para cambiar entre 31 datasets (Censo, 10 elecciones, IPC, salud, etc).</li>
+        <li><b>Tabs analíticos</b>: Ranking · Cruce censo-electoral · Swing · Modelo · Clusters · LISA · Heatmap · Macro · Series.</li>
+        <li><b>Animación</b> ▶: cuando seleccionás dataset electoral, aparece control para cyclear años.</li>
+        <li><b>Search</b>: escribí cualquier municipio, localidad o dirección (Georef).</li>
+        <li><b>★ Bookmarks · ⛶ Presentación · 🌙 Tema</b> en el topbar.</li>
+      </ul>
+      <div style="display:flex;gap:6px;margin-top:14px">
+        <button id="welc-close" class="mini" style="flex:1">Empezar a usar →</button>
+        <button id="welc-never" class="mini">No mostrar más</button>
+      </div>
+    </div>
+  </div>
+
   <div id="bookmarks-pop" class="hidden">
     <div class="bm-head">
       <strong>Bookmarks</strong>
@@ -440,6 +461,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260519g" type="module"></script>
+<script src="js/app.js?v=20260519h" type="module"></script>
 </body>
 </html>
