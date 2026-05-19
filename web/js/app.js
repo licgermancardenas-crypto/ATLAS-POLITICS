@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519o · circuitos electorales PBA (1.150 polígonos)");
+console.log("[ATLAS] build 20260519p · histórico circuitos PBA 2011-2023 (Pres+Dip+Sen)");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -93,19 +93,35 @@ const DATASETS = {
   "2023_diputados":  makeElectoralDS("Diputados Nac. 2023",          "2023_diputados",  ["lla","pj","jxc","hacemos","izq"], 2023),
   "2023_senadores":  makeElectoralDS("Senadores Nac. 2023 (8 prov.)", "2023_senadores", ["lla","pj","jxc","hacemos","izq"], 2023),
   pba_circuitos: {
-    label: "PBA · Pres 2023 por circuito electoral (1.150 circuitos)",
+    label: "PBA · Histórico electoral por circuito 2011-2023",
     year: 2023,
     levels: ["circuitos_pba"],
-    fileFor: () => `../data/web/elecciones_pba_circuitos.json`,
+    fileFor: () => `../data/web/pba_circuitos_historico.json`,
     vars: [
-      ["lla_pct", "% LLA"],
-      ["pj_pct", "% UP (PJ)"],
-      ["jxc_pct", "% JxC"],
-      ["hacemos_pct", "% Hacemos"],
-      ["izq_pct", "% FIT"],
+      // Alias 2023 para choropleth rápido
+      ["lla_pct", "% LLA (Pres 2023)"],
+      ["pj_pct", "% PJ (Pres 2023)"],
+      ["jxc_pct", "% JxC (Pres 2023)"],
+      ["hacemos_pct", "% Hacemos (Pres 2023)"],
+      ["izq_pct", "% FIT (Pres 2023)"],
+      // Histórico Presidente
+      ["pres_2011_pj_pct", "% PJ Pres 2011"],
+      ["pres_2015_pj_pct", "% PJ Pres 2015"],
+      ["pres_2019_pj_pct", "% PJ Pres 2019"],
+      ["pres_2023_pj_pct", "% PJ Pres 2023"],
+      ["pres_2015_jxc_pct", "% Cambiemos Pres 2015"],
+      ["pres_2019_jxc_pct", "% JxC Pres 2019"],
+      ["pres_2023_jxc_pct", "% JxC Pres 2023"],
+      ["pres_2023_lla_pct", "% LLA Pres 2023"],
+      // Histórico Diputados
+      ["dip_2017_pj_pct", "% PJ Dip 2017"],
+      ["dip_2021_pj_pct", "% PJ Dip 2021"],
+      ["dip_2023_pj_pct", "% PJ Dip 2023"],
+      ["dip_2021_lla_pct", "% LLA Dip 2021"],
+      ["dip_2023_lla_pct", "% LLA Dip 2023"],
     ],
     defaultVar: "lla_pct",
-    paletteFor: (v) => v === "lla_pct" ? "lla" : v === "pj_pct" ? "pj" : v === "jxc_pct" ? "jxc" : "default",
+    paletteFor: (v) => /lla/.test(v) ? "lla" : /pj/.test(v) ? "pj" : /jxc/.test(v) ? "jxc" : "default",
   },
   economia: {
     label: "Economía · Exportaciones 2024",
