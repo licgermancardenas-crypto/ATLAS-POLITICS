@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519a · migración temporal clusters 2019→2023");
+console.log("[ATLAS] build 20260519b · ficha completa multi-dataset + LISA local");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -20,6 +20,8 @@ const VAR_SCALES = {
   swing:   ["#7f1d1d","#b91c1c","#dc2626","#ef4444","#f87171","#9ca3af","#86efac","#4ade80","#22c55e","#15803d","#166534"],
   // Paleta categórica para clusters (no ordinal, hasta 8 grupos)
   cluster: ["#5aa3ff","#ff6b6b","#7df2c6","#ffb454","#b288e8","#ed8da0","#fceabb","#74c0e8"],
+  // LISA: 0=ns, 1=HH (rojo), 2=LL (azul), 3=HL (naranja), 4=LH (cian)
+  lisa: ["#3a3a4a","#ff6b6b","#5aa3ff","#ffb454","#7df2c6"],
 };
 
 // Helper para construir un dataset electoral con vars dinámicas
@@ -376,7 +378,16 @@ const DATASETS = {
     ],
     defaultVar: "escuelas_por_10k_hab",
   },
-  // Pseudo-dataset para clustering — alimentado dinámicamente
+  _lisa: {
+    label: "LISA",
+    year: 0,
+    levels: ["departamentos"],
+    fileFor: () => null,
+    vars: [["lisa_cat", "Categoría LISA"]],
+    defaultVar: "lisa_cat",
+    paletteFor: () => "lisa",
+    _virtual: true,
+  },
   _cluster: {
     label: "Clusters",
     year: 0,
@@ -430,7 +441,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","_swing","_cluster"].map(k => [k, {}]));
+  "mineria","pesca","pobreza","_swing","_cluster","_lisa"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
@@ -458,8 +469,8 @@ function paletteName() {
 function colorFor(v) {
   if (v == null || !isFinite(v) || !activeVar) return null;
   const ramp = VAR_SCALES[paletteName()] || VAR_SCALES.default;
-  // Para cluster (categórico), usar ID directo como índice
-  if (paletteName() === "cluster") return ramp[Math.round(v) % ramp.length];
+  // Para cluster / LISA (categórico), usar ID directo como índice
+  if (paletteName() === "cluster" || paletteName() === "lisa") return ramp[Math.round(v) % ramp.length];
   if (!breaks.length) return ramp[Math.floor(ramp.length / 2)];
   let i = 0;
   while (i < breaks.length && v > breaks[i]) i++;
@@ -828,9 +839,34 @@ async function refreshSelectedPanel(props) {
   renderSpark(ind);
   renderHist(ind);
   renderExtras(ind);
+  renderAllDatasets(code, selectedLevel).catch(() => {});
   switchTab("info");
-  // Sparkline desde Series API si el dataset tiene mapping (ej. IPC regional)
   loadFeatureSerieIfAvailable(code).catch(() => {});
+}
+
+async function renderAllDatasets(code, level) {
+  const body = $("#sel-all-body");
+  if (!code) { body.innerHTML = ""; return; }
+  body.innerHTML = "<div style='color:var(--muted)'>Cargando…</div>";
+  const sections = [];
+  for (const [dsKey, dsCfg] of Object.entries(DATASETS)) {
+    if (dsCfg._virtual) continue;
+    if (!dsCfg.levels.includes(level)) continue;
+    const data = await loadIndicadores(level, dsKey);
+    const rec = data?.[code];
+    if (!rec) continue;
+    const items = Object.entries(rec)
+      .filter(([k, v]) => !k.startsWith("_") && !Array.isArray(v) && typeof v !== "object" && v != null)
+      .slice(0, 8);
+    if (!items.length) continue;
+    sections.push(`<div class="ds-section">
+      <h4>${dsCfg.label}</h4>
+      <div class="ds-vars">${items.map(([k, v]) =>
+        `<span class="ds-var"><span class="k">${labelFor(k).slice(0,18)}</span><span class="v">${typeof v === 'number' ? fmtVal(v, k) : v}</span></span>`
+      ).join("")}</div>
+    </div>`);
+  }
+  body.innerHTML = sections.length ? sections.join("") : "<div style='color:var(--muted)'>Sin datos en otros datasets</div>";
 }
 
 async function loadFeatureSerieIfAvailable(code) {
@@ -2288,6 +2324,101 @@ async function runTemporalClusters() {
 }
 
 $("#cl-temporal").addEventListener("click", runTemporalClusters);
+
+// -- LISA · Local Indicators of Spatial Association --
+function knnByCentroid(layer, k = 8) {
+  // Devuelve { code → [code de vecino...] } usando los k centroides más cercanos
+  const features = [];
+  layer.eachLayer(l => {
+    const p = l.feature?.properties;
+    if (!p?.codigo_indec) return;
+    try {
+      const c = l.getBounds().getCenter();
+      features.push({ code: p.codigo_indec, lat: c.lat, lng: c.lng });
+    } catch {}
+  });
+  const out = {};
+  for (const a of features) {
+    const dists = features
+      .filter(b => b.code !== a.code)
+      .map(b => ({ code: b.code,
+        d: (a.lat - b.lat) ** 2 + (a.lng - b.lng) ** 2 }))
+      .sort((x, y) => x.d - y.d).slice(0, k);
+    out[a.code] = dists.map(d => d.code);
+  }
+  return out;
+}
+
+async function runLISA() {
+  if (!activeVar || activeDataset.startsWith("_")) {
+    $("#lisa-stats").innerHTML = "Elegí un dataset real + variable activa";
+    return;
+  }
+  $("#lisa-stats").innerHTML = "Calculando…";
+  const indLvl = "departamentos";
+  await loadIndicadores(indLvl, activeDataset);
+  const ind = indicadores[activeDataset]?.[indLvl];
+  if (!ind) { $("#lisa-stats").innerHTML = "Sin datos"; return; }
+
+  // Build values con códigos que tienen valor
+  const entries = Object.entries(ind)
+    .map(([c, d]) => [c, d?.[activeVar]])
+    .filter(([, v]) => v != null && isFinite(v));
+  if (entries.length < 30) { $("#lisa-stats").innerHTML = "Pocas observaciones"; return; }
+
+  const codes = entries.map(e => e[0]);
+  const vals = entries.map(e => +e[1]);
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+  const z = vals.map(v => (v - mean) / sd);
+  const zByCode = Object.fromEntries(codes.map((c, i) => [c, z[i]]));
+
+  // Vecinos
+  const knn = knnByCentroid(layerCache.departamentos, 8);
+
+  // Moran I local + I global
+  let Iglobal = 0; let n = 0;
+  const lisa = {};
+  const categorias = { 1: 0, 2: 0, 3: 0, 4: 0, 0: 0 };  // HH, LL, HL, LH, ns
+  for (const c of codes) {
+    const zi = zByCode[c];
+    const vecinos = (knn[c] || []).filter(nc => zByCode[nc] != null);
+    if (!vecinos.length) { lisa[c] = { lisa_cat: 0 }; categorias[0]++; continue; }
+    const zMean = vecinos.reduce((s, nc) => s + zByCode[nc], 0) / vecinos.length;
+    const Ii = zi * zMean;
+    Iglobal += Ii; n++;
+    // Categoría LISA
+    let cat = 0;
+    if (Math.abs(Ii) > 0.5) { // umbral simple, sin permutation test
+      if (zi > 0 && zMean > 0) cat = 1;       // HH
+      else if (zi < 0 && zMean < 0) cat = 2;  // LL
+      else if (zi > 0 && zMean < 0) cat = 3;  // HL outlier
+      else cat = 4;                            // LH outlier
+    }
+    lisa[c] = { lisa_cat: cat, lisa_zi: +zi.toFixed(2), lisa_zlag: +zMean.toFixed(2), lisa_Ii: +Ii.toFixed(2) };
+    categorias[cat]++;
+  }
+  Iglobal /= n;
+
+  indicadores._lisa.departamentos = lisa;
+  activeDataset = "_lisa";
+  populateVarSelect();
+  activeVar = "lisa_cat";
+  await setLevel("departamentos", { fit: false });
+  restyleActive();
+  // Sin legenda continua para LISA
+  $("#legend").classList.add("hidden");
+
+  $("#lisa-stats").innerHTML = `
+    <span>n=${n} deptos</span>
+    <span>Moran I global ≈ <span class="r">${Iglobal.toFixed(3)}</span></span>`;
+  const labels = { 1: "HH (rojo)", 2: "LL (azul)", 3: "HL outlier alto", 4: "LH outlier bajo", 0: "no significativo" };
+  $("#lisa-summary").innerHTML = Object.entries(categorias).map(([k, v]) =>
+    `<div class="rate"><span class="n">${labels[k]}</span><span class="b">${v}</span></div>`
+  ).join("");
+}
+
+$("#lisa-run").addEventListener("click", runLISA);
 
 // Botones de exportación PNG (delegación)
 document.addEventListener("click", e => {

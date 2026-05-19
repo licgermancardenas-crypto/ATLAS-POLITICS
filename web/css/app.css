@@ -217,6 +217,15 @@ a:hover{text-decoration:underline}
 .rk-row .val{color:var(--accent-2);font-variant-numeric:tabular-nums;font-weight:600}
 
 .extras{font-size:12px;color:var(--muted)}
+.all-datasets{margin-top:10px;font-size:11px}
+.all-datasets summary{cursor:pointer;color:var(--accent);padding:4px 0;font-weight:500}
+.all-datasets summary:hover{color:var(--accent-2)}
+.ds-section{margin-top:8px;padding:6px 8px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.ds-section h4{margin:0 0 4px 0;font-size:11px;color:var(--accent-2);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.ds-section .ds-vars{display:flex;flex-wrap:wrap;gap:4px;font-size:10px}
+.ds-section .ds-var{background:var(--bg-2);padding:2px 6px;border-radius:3px;color:var(--text)}
+.ds-section .ds-var .k{color:var(--muted);margin-right:3px}
+.ds-section .ds-var .v{color:var(--accent-2);font-variant-numeric:tabular-nums;font-weight:500}
 .extras table{width:100%;border-collapse:collapse;margin-top:8px}
 .extras td{padding:4px 0;border-bottom:1px solid var(--line)}
 .extras td:last-child{text-align:right;color:var(--text)}
