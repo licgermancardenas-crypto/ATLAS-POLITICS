@@ -6,7 +6,7 @@
 <title>ATLAS politics · Argentina</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<link rel="stylesheet" href="css/app.css?v=20260518o" />
+<link rel="stylesheet" href="css/app.css?v=20260518p" />
 </head>
 <body>
 <div id="layout">
@@ -94,6 +94,7 @@
       <button class="tab" data-tab="comparar">Comparar</button>
       <button class="tab" data-tab="modelo">Modelo</button>
       <button class="tab" data-tab="series">Series</button>
+      <button class="tab" data-tab="heatmap">Heatmap</button>
       <button class="tab" data-tab="economia">Economía</button>
       <button class="tab" data-tab="politica">Política</button>
     </div>
@@ -171,6 +172,32 @@
         </div>
         <div class="cruce-stats" id="mod-stats"></div>
         <div id="mod-coefs"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-heatmap">
+      <div class="block">
+        <h3>Heatmap de correlaciones</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+          Pearson R entre todas las variables del nivel <b>departamento</b>.
+        </div>
+        <div class="cruce-controls">
+          <label>Nivel <select id="hm-level">
+            <option value="departamentos" selected>Departamentos</option>
+            <option value="provincias">Provincias</option>
+          </select></label>
+          <label>Datasets <select id="hm-scope">
+            <option value="electoral_censo">Electoral ↔ Censo</option>
+            <option value="economia_censo">Economía ↔ Censo</option>
+            <option value="todo_vs_lla">Todo ↔ % LLA 2023</option>
+            <option value="todo_vs_pj">Todo ↔ % PJ 2023</option>
+          </select></label>
+          <button id="hm-compute" class="mini" style="margin-top:6px">Calcular</button>
+        </div>
+        <div class="cruce-stats" id="hm-stats"></div>
+        <svg id="hm-svg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet"
+          style="width:100%;height:auto;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;margin-top:6px"></svg>
+        <div class="cruce-hover" id="hm-hover">—</div>
       </div>
     </section>
 
@@ -296,6 +323,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="js/app.js?v=20260518o" type="module"></script>
+<script src="js/app.js?v=20260518p" type="module"></script>
 </body>
 </html>

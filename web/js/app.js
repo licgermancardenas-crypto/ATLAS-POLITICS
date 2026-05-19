@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518o · pobreza por aglomerado · 31 datasets totales");
+console.log("[ATLAS] build 20260518p · heatmap correlaciones global + tab Heatmap");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -1134,8 +1134,10 @@ function switchTab(name) {
   if (name === "cruce") renderCruce();
   if (name === "comparar") renderComparar();
   if (name === "series") {
-    // Cargar IPC por defecto en primera apertura
     if (!$("#ser-svg").innerHTML.trim()) loadSerie("148.3_INIVELNAL_DICI_M_26");
+  }
+  if (name === "heatmap" && !$("#hm-svg").innerHTML.trim()) {
+    // No auto-compute (es pesado). El usuario hace click en "Calcular".
   }
 }
 $$(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
@@ -1604,6 +1606,122 @@ async function renderCruce() {
     });
   });
 });
+
+// -- Heatmap de correlaciones --
+async function computeHeatmap() {
+  const level = $("#hm-level").value;
+  const scope = $("#hm-scope").value;
+
+  // Definir qué datasets+vars usar
+  const CENSO_VARS = ["personas", "hogares", "viv_part_h", "densidad_km2",
+    "idx_masculinidad", "personas_por_hogar", "personas_por_vivienda"];
+  const ELECTORAL_DS = ["2015_generales","2015_balotaje","2017_diputados",
+    "2019_paso","2019_generales","2021_diputados",
+    "2023_generales","2023_balotaje","2023_diputados"];
+  const ELECTORAL_KEYS = ["pj_pct","jxc_pct","lla_pct","izq_pct","participacion"];
+  const ECON_PAIRS = [
+    ["economia", ["exportaciones_per_capita_usd", "exportaciones_pp_share", "exportaciones_moa_share"]],
+    ["ipc", ["ipc_var_interanual"]],
+    ["empleo", ["desempleo"]],
+    ["pobreza", ["pobreza_pct"]],
+    ["agro", ["agro_produccion_total_tm"]],
+    ["socio", ["mortalidad_infantil"]],
+    ["salud", ["establecimientos_por_10k_hab"]],
+    ["educacion", ["escuelas_por_10k_hab", "pct_estatal"]],
+    ["energia", ["energia_potencia_per_capita_w"]],
+  ];
+
+  // Construir lista de (label, var, getValue) por columna y fila
+  $("#hm-stats").innerHTML = "Cargando datasets…";
+  await loadIndicadores(level, "censo");
+
+  let rowDefs = [], colDefs = [];
+  if (scope === "electoral_censo") {
+    // Rows: vars electorales · Cols: vars censales
+    for (const ds of ELECTORAL_DS) {
+      await loadIndicadores(level, ds);
+      for (const k of ELECTORAL_KEYS) {
+        const lbl = `${ds.substring(0,4)}_${ds.substring(5)} ${k.replace('_pct','%')}`;
+        rowDefs.push({ label: lbl, ds, key: k });
+      }
+    }
+    for (const k of CENSO_VARS) colDefs.push({ label: labelFor(k), ds: "censo", key: k });
+  } else if (scope === "economia_censo") {
+    for (const [ds, keys] of ECON_PAIRS) {
+      await loadIndicadores(level, ds);
+      for (const k of keys) rowDefs.push({ label: `${ds}:${k}`, ds, key: k });
+    }
+    for (const k of CENSO_VARS) colDefs.push({ label: labelFor(k), ds: "censo", key: k });
+  } else {
+    // "Todo ↔ % LLA / PJ 2023"
+    const target = scope === "todo_vs_lla" ? "lla_pct" : "pj_pct";
+    await loadIndicadores(level, "2023_generales");
+    colDefs.push({ label: `2023 ${target}`, ds: "2023_generales", key: target });
+    for (const k of CENSO_VARS) rowDefs.push({ label: labelFor(k), ds: "censo", key: k });
+    for (const [ds, keys] of ECON_PAIRS) {
+      await loadIndicadores(level, ds);
+      for (const k of keys) rowDefs.push({ label: `${ds}:${k}`, ds, key: k });
+    }
+  }
+
+  // Computar matriz de correlaciones
+  const getVal = (def, code) => indicadores[def.ds]?.[level]?.[code]?.[def.key];
+  const allCodes = new Set();
+  rowDefs.concat(colDefs).forEach(def => {
+    const ind = indicadores[def.ds]?.[level];
+    if (ind) Object.keys(ind).forEach(c => allCodes.add(c));
+  });
+  const codes = [...allCodes];
+
+  const matrix = rowDefs.map(rd => colDefs.map(cd => {
+    const pairs = [];
+    for (const code of codes) {
+      const x = getVal(rd, code), y = getVal(cd, code);
+      if (x != null && y != null && isFinite(x) && isFinite(y)) pairs.push([x, y]);
+    }
+    return pairs.length >= 5 ? pearsonR(pairs) : null;
+  }));
+
+  // Render SVG
+  const W = 360, H = 360;
+  const padL = 110, padT = 100;
+  const cellW = (W - padL - 6) / colDefs.length;
+  const cellH = (H - padT - 6) / rowDefs.length;
+  const colorFor = (r) => {
+    if (r == null) return "#222b41";
+    const t = Math.abs(r);
+    if (r > 0) return `rgba(125,242,198,${Math.min(1, t).toFixed(2)})`;
+    return `rgba(255,107,107,${Math.min(1, t).toFixed(2)})`;
+  };
+  const cells = matrix.map((row, i) => row.map((v, j) => `
+    <rect x="${padL + j*cellW}" y="${padT + i*cellH}" width="${cellW-1}" height="${cellH-1}"
+      fill="${colorFor(v)}"
+      data-row="${i}" data-col="${j}" data-r="${v == null ? '' : v.toFixed(3)}"
+      class="hm-cell"/>
+  `).join("")).join("");
+  const rowLabels = rowDefs.map((d, i) => `
+    <text x="${padL - 4}" y="${padT + i*cellH + cellH/2 + 3}" text-anchor="end"
+      fill="#8893ad" font-size="8">${d.label.substring(0, 22)}</text>
+  `).join("");
+  const colLabels = colDefs.map((d, j) => `
+    <text x="${padL + j*cellW + cellW/2}" y="${padT - 4}" text-anchor="start" fill="#8893ad" font-size="8"
+      transform="rotate(-45 ${padL + j*cellW + cellW/2} ${padT - 4})">${d.label.substring(0, 20)}</text>
+  `).join("");
+  $("#hm-svg").innerHTML = cells + rowLabels + colLabels;
+  $("#hm-stats").innerHTML = `<span>${rowDefs.length}×${colDefs.length} celdas</span>
+    <span>verde=correlación positiva, rojo=negativa, intensidad=|R|</span>`;
+
+  $$(".hm-cell").forEach(c => {
+    c.addEventListener("mouseenter", e => {
+      const i = +e.target.dataset.row, j = +e.target.dataset.col;
+      const r = e.target.dataset.r || "—";
+      $("#hm-hover").textContent = `${rowDefs[i].label} ↔ ${colDefs[j].label} = R ${r}`;
+    });
+    c.addEventListener("mouseleave", () => $("#hm-hover").textContent = "—");
+  });
+}
+
+$("#hm-compute").addEventListener("click", computeHeatmap);
 
 // -- Series de Tiempo API (datos.gob.ar) --
 const SERIES_API = "https://apis.datos.gob.ar/series/api";
