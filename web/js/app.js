@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518u · export PNG + outliers Mahalanobis + más Series API");
+console.log("[ATLAS] build 20260519a · migración temporal clusters 2019→2023");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -2163,6 +2163,131 @@ $("#cl-run").addEventListener("click", async () => {
   await runCluster();
   await renderPCABiplot();
 });
+
+// -- Migración de clusters 2019 → 2023 --
+function clusterFor(preset, k) {
+  // Build X + codes para un preset dado
+  const getVal = (ds, key, code) => indicadores[ds]?.departamentos?.[code]?.[key];
+  const layer = layerCache.departamentos;
+  const allCodes = new Set();
+  if (layer) layer.eachLayer(l => { const p = l.feature?.properties; if (p?.codigo_indec) allCodes.add(p.codigo_indec); });
+  const codes = []; const X = [];
+  for (const code of allCodes) {
+    const row = preset.map(([ds, key]) => {
+      const v = getVal(ds, key, code);
+      return v == null || !isFinite(v) ? null : +v;
+    });
+    if (row.every(v => v != null)) { codes.push(code); X.push(row); }
+  }
+  if (X.length < 20) return null;
+  // Standardize
+  const dim = X[0].length;
+  for (let j = 0; j < dim; j++) {
+    const col = X.map(r => r[j]);
+    const m = col.reduce((a, b) => a + b, 0) / col.length;
+    const sd = Math.sqrt(col.reduce((a, b) => a + (b - m) ** 2, 0) / col.length) || 1;
+    for (let i = 0; i < X.length; i++) X[i][j] = (X[i][j] - m) / sd;
+  }
+  const res = kmeans(X, k);
+  if (!res) return null;
+  return { codes, assign: res.assign, centroids: res.centroids, X };
+}
+
+function alignClusters(prev, curr) {
+  // Hungarian-lite: greedy match cada centroide curr al más cercano de prev
+  const k = prev.centroids.length;
+  const used = new Set();
+  const mapping = {};
+  for (let c = 0; c < k; c++) {
+    let best = -1, bestD = Infinity;
+    for (let p = 0; p < k; p++) {
+      if (used.has(p)) continue;
+      let d = 0;
+      for (let j = 0; j < curr.centroids[c].length; j++) {
+        d += (curr.centroids[c][j] - prev.centroids[p][j]) ** 2;
+      }
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    if (best >= 0) { mapping[c] = best; used.add(best); }
+  }
+  // Re-numerar curr.assign para que use IDs de prev
+  return curr.assign.map(c => mapping[c] ?? c);
+}
+
+async function runTemporalClusters() {
+  $("#cl-tempor-title").textContent = "Calculando migración 2019→2023…";
+  const k = +$("#cl-k").value;
+  // Preset electoral fijo: misma estructura para ambos años
+  const preset2019 = [
+    ["2019_generales", "pj_pct", "% PJ"],
+    ["2019_generales", "jxc_pct", "% JxC"],
+    ["2019_generales", "izq_pct", "% FIT"],
+    ["2019_generales", "participacion", "Particip."],
+  ];
+  const preset2023 = [
+    ["2023_generales", "pj_pct", "% PJ"],
+    ["2023_generales", "jxc_pct", "% JxC"],
+    ["2023_generales", "izq_pct", "% FIT"],
+    ["2023_generales", "participacion", "Particip."],
+  ];
+  await Promise.all([loadIndicadores("departamentos", "2019_generales"),
+                     loadIndicadores("departamentos", "2023_generales")]);
+  const c2019 = clusterFor(preset2019, k);
+  const c2023 = clusterFor(preset2023, k);
+  if (!c2019 || !c2023) { $("#cl-tempor-title").textContent = "Sin datos suficientes"; return; }
+
+  // Alinear IDs 2023 a 2019 vía centroides cercanos
+  const assign2023Aligned = alignClusters(c2019, c2023);
+
+  // Construir mapa code → (cluster_2019, cluster_2023)
+  const codes2019 = new Map(c2019.codes.map((c, i) => [c, c2019.assign[i]]));
+  const codes2023 = new Map(c2023.codes.map((c, i) => [c, assign2023Aligned[i]]));
+
+  // Matriz transición k×k
+  const mat = Array.from({ length: k }, () => new Array(k).fill(0));
+  const moved = []; // deptos que cambiaron
+  const stayed = [];
+  for (const [code, c19] of codes2019) {
+    const c23 = codes2023.get(code);
+    if (c23 == null) continue;
+    mat[c19][c23]++;
+    if (c19 !== c23) moved.push({ code, from: c19, to: c23 });
+    else stayed.push(code);
+  }
+
+  // Render matriz
+  $("#cl-tempor-title").textContent = `Migración 2019→2023 (${stayed.length} se quedaron · ${moved.length} migraron)`;
+  const ramp = VAR_SCALES.cluster;
+  const rows = [];
+  // Header
+  rows.push(`<div class="hdr">2019 ↓ / 2023 →</div>`);
+  for (let c = 0; c < k; c++) rows.push(`<div class="hdr" style="color:${ramp[c % ramp.length]}">C${c+1}</div>`);
+  for (let r = 0; r < k; r++) {
+    rows.push(`<div class="hdr" style="color:${ramp[r % ramp.length]}">C${r+1}</div>`);
+    for (let c = 0; c < k; c++) {
+      const cls = r === c ? "diag" : "off";
+      rows.push(`<div class="${cls}">${mat[r][c] || ""}</div>`);
+    }
+  }
+  $("#cl-temporal-out").innerHTML = `
+    <div class="tt-mat" style="grid-template-columns:repeat(${k+1},1fr)">${rows.join("")}</div>
+    <div style="color:var(--muted);font-size:10px">Diagonal = quedaron en el mismo cluster.
+    Off-diagonal = migraron entre clusters.</div>
+    <button id="cl-mark-moved" class="mini">Pintar mapa: deptos que migraron</button>`;
+
+  $("#cl-mark-moved").addEventListener("click", () => {
+    const obj = {};
+    for (const m of moved) obj[m.code] = { cluster: m.to };
+    for (const code of stayed) obj[code] = { cluster: codes2019.get(code) };
+    indicadores._cluster.departamentos = obj;
+    activeDataset = "_cluster";
+    populateVarSelect();
+    activeVar = "cluster";
+    restyleActive();
+  });
+}
+
+$("#cl-temporal").addEventListener("click", runTemporalClusters);
 
 // Botones de exportación PNG (delegación)
 document.addEventListener("click", e => {

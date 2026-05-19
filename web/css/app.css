@@ -175,6 +175,13 @@ a:hover{text-decoration:underline}
 .cmp-rm{cursor:pointer;color:var(--muted);margin-left:4px}
 .cmp-rm:hover{color:var(--danger)}
 
+#cl-temporal-out{font-size:11px;display:flex;flex-direction:column;gap:6px}
+.tt-mat{display:grid;gap:1px;background:var(--line);padding:1px;border-radius:4px;font-size:10px}
+.tt-mat > div{background:var(--bg-2);padding:3px;text-align:center;font-variant-numeric:tabular-nums}
+.tt-mat .hdr{background:var(--panel);color:var(--muted);font-weight:600}
+.tt-mat .diag{background:rgba(125,242,198,.18);color:var(--accent-2)}
+.tt-mat .off{color:var(--text)}
+
 #cl-summary{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:280px;overflow-y:auto}
 .cl-card{
   display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;
