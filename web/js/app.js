@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519l · PWA service worker + offline-first");
+console.log("[ATLAS] build 20260519m · GitHub Actions weekly refresh + mobile UX");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {

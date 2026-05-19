@@ -1,0 +1,58 @@
+name: Weekly data refresh
+
+on:
+  schedule:
+    # Lunes 04:00 UTC (01:00 Argentina)
+    - cron: "0 4 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          pip install --quiet pandas requests pyarrow openpyxl
+
+      - name: Run light ETLs (datos.gob.ar / APIs)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          mkdir -p data/raw/economia data/raw/socio data/raw/agro data/raw/pba data/raw/caba
+          # Solo ETLs que se alimentan de URLs públicas y producen output liviano.
+          # Geometrías + radios + elecciones quedan fuera (necesitan datos locales).
+          python scripts/03_etl_apis.py            || echo "  ✗ apis"
+          python scripts/07_etl_economia_provincia.py || echo "  ✗ economia"
+          python scripts/08_etl_socio_provincia.py || echo "  ✗ socio"
+          python scripts/09_etl_ipc_provincia.py   || echo "  ✗ ipc"
+          python scripts/10_etl_empleo_provincia.py || echo "  ✗ empleo"
+          python scripts/11_etl_salud_provincia.py || echo "  ✗ salud"
+          python scripts/13_etl_vacunas_provincia.py || echo "  ✗ vacunas"
+          python scripts/14_etl_pba_municipal.py   || echo "  ✗ pba"
+          python scripts/16_etl_extras.py          || echo "  ✗ extras"
+          python scripts/18_etl_agro_provincia.py  || echo "  ✗ agro"
+          python scripts/20_etl_trade_bloques.py   || echo "  ✗ trade_bloques"
+          python scripts/21_etl_energia_provincia.py || echo "  ✗ energia"
+          python scripts/23_etl_mineria_provincia.py || echo "  ✗ mineria"
+          python scripts/25_etl_pobreza_aglomerado.py || echo "  ✗ pobreza"
+
+      - name: Commit + push si hay cambios
+        run: |
+          git config user.name "atlas-bot"
+          git config user.email "atlas-bot@users.noreply.github.com"
+          git add data/web catalogs
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "chore(data): weekly refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
