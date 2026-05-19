@@ -415,6 +415,24 @@ body.present #anim,body.present #legend{z-index:1000}
 }
 .sep{color:var(--line)}
 
+@media print {
+  body { background: white !important; color: black !important; }
+  #topbar, #botbar, #map, .tabs, #anim, #legend, .actions, #welcome, #bookmarks-pop { display: none !important; }
+  #layout { grid-template-columns: 1fr !important; grid-template-areas: "side" !important; height: auto !important; }
+  #side { background: white !important; border: none !important; overflow: visible !important; }
+  .panel { display: block !important; page-break-inside: avoid; background: white !important; color: black !important; }
+  .panel:not(#panel-info) { display: none !important; }
+  #panel-info h2 { font-size: 24px; color: black !important; margin-top: 0; }
+  .kpi, .cmp-row, .ds-section, .ds-var, .rk-row, .extras table {
+    background: white !important; color: black !important; border-color: #ccc !important;
+  }
+  .kpi .v, .cmp-row .v, .ds-section h4, .rk-row .val { color: #1a2236 !important; }
+  details { display: block !important; }
+  details summary { display: none; }
+  .all-datasets > div { display: block !important; }
+  svg, path, rect, line, circle, text { color: black; }
+}
+
 @media (max-width: 900px){
   #layout{
     grid-template-columns:1fr;

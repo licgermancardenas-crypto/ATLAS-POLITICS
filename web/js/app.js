@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519i · Spider chart radar en Comparar");
+console.log("[ATLAS] build 20260519j · top-5 similares + print PDF report");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -867,6 +867,7 @@ async function refreshSelectedPanel(props) {
   renderHist(ind);
   renderExtras(ind);
   renderAllDatasets(code, selectedLevel).catch(() => {});
+  renderSimilar(code, selectedLevel).catch(() => {});
   switchTab("info");
   loadFeatureSerieIfAvailable(code).catch(() => {});
   // Si NO hay serie embebida (sparkline ya renderizado por renderSpark), intentar trayectoria electoral
@@ -911,6 +912,80 @@ async function renderTrayectoria(code, level) {
     label: c.replace("_pct", ""), points: series[c],
   }));
   renderMultiSpark(renderable, "Trayectoria electoral 2015-2023");
+}
+
+async function renderSimilar(code, level) {
+  const body = $("#sel-similar-body");
+  if (!code || level !== "departamentos") { body.innerHTML = ""; return; }
+  body.innerHTML = "<div style='color:var(--muted)'>Calculando…</div>";
+
+  // Variables a usar — electoral + censo mixto
+  const VARS = [
+    ["2023_generales", "lla_pct"],
+    ["2023_generales", "pj_pct"],
+    ["2023_generales", "jxc_pct"],
+    ["censo", "densidad_km2"],
+    ["censo", "personas_por_hogar"],
+    ["censo", "idx_masculinidad"],
+  ];
+  await Promise.all([...new Set(VARS.map(v => v[0]))].map(ds => loadIndicadores(level, ds)));
+
+  // Build vectors
+  const layer = layerCache.departamentos;
+  const allCodes = new Set();
+  if (layer) layer.eachLayer(l => { const p = l.feature?.properties; if (p?.codigo_indec) allCodes.add(p.codigo_indec); });
+  const get = (ds, k, c) => indicadores[ds]?.[level]?.[c]?.[k];
+  const codes = [], X = [], names = [], ctxs = [];
+  for (const c of allCodes) {
+    const row = VARS.map(([ds, k]) => {
+      const v = get(ds, k, c);
+      return v == null || !isFinite(v) ? null : +v;
+    });
+    if (row.every(v => v != null)) {
+      codes.push(c); X.push(row);
+      let nm = c, ctx = "";
+      layer.eachLayer(l => {
+        if (l.feature?.properties.codigo_indec === c) {
+          nm = l.feature.properties.nombre;
+          ctx = l.feature.properties.provincia || "";
+        }
+      });
+      names.push(nm); ctxs.push(ctx);
+    }
+  }
+  if (X.length < 5) { body.innerHTML = "<div style='color:var(--muted)'>Sin datos suficientes</div>"; return; }
+
+  // Estandarizar
+  const dim = X[0].length;
+  for (let j = 0; j < dim; j++) {
+    const col = X.map(r => r[j]);
+    const m = col.reduce((a, b) => a + b, 0) / col.length;
+    const sd = Math.sqrt(col.reduce((a, b) => a + (b - m) ** 2, 0) / col.length) || 1;
+    for (let i = 0; i < X.length; i++) X[i][j] = (X[i][j] - m) / sd;
+  }
+
+  // Find target idx
+  const tgtIdx = codes.indexOf(code);
+  if (tgtIdx < 0) { body.innerHTML = "<div style='color:var(--muted)'>Depto no en universo</div>"; return; }
+  const tgt = X[tgtIdx];
+
+  // Compute distances
+  const dists = X.map((r, i) => ({
+    code: codes[i], name: names[i], ctx: ctxs[i],
+    d: i === tgtIdx ? Infinity : Math.sqrt(r.reduce((s, x, j) => s + (x - tgt[j]) ** 2, 0)),
+  }));
+  dists.sort((a, b) => a.d - b.d);
+  const top = dists.slice(0, 5);
+
+  body.innerHTML = top.map((d, i) => `
+    <div class="rk-row" data-code="${d.code}">
+      <span class="pos">${i + 1}</span>
+      <span class="nom" title="${d.name}">${d.name} <span class="ctx">${d.ctx}</span></span>
+      <span class="val">${d.d.toFixed(2)}</span>
+    </div>`).join("");
+  $$("#sel-similar-body .rk-row").forEach(r => {
+    r.addEventListener("click", () => zoomToCode(r.dataset.code));
+  });
 }
 
 async function renderAllDatasets(code, level) {
@@ -1454,6 +1529,12 @@ async function loadHash() {
   } finally { suppressHashUpdate = false; }
   return true;
 }
+$("#btn-print").addEventListener("click", () => {
+  // Asegurar que details estén abiertos para impresión
+  $$("details.all-datasets").forEach(d => d.setAttribute("open", "open"));
+  setTimeout(() => window.print(), 200);
+});
+
 $("#btn-share").addEventListener("click", async () => {
   syncHash();
   try { await navigator.clipboard.writeText(location.href); $("#btn-share").textContent = "¡Copiado!"; setTimeout(() => $("#btn-share").textContent = "Copiar permalink", 1500); }
