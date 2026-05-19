@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519r · Presupuesto Abierto + Transporte ministerial");
+console.log("[ATLAS] build 20260519s · servicios habit. + tabla presupuesto en Dashboard");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -402,6 +402,18 @@ const DATASETS = {
     ],
     defaultVar: "transporte_subsidios_per_capita_ars",
   },
+  servicios: {
+    label: "Sociales · Servicios habitacionales",
+    year: 2023,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/servicios_provincia.json`,
+    vars: [
+      ["servicios_agua_pct", "% Hogares con agua corriente"],
+      ["servicios_cloacas_pct", "% Hogares con cloacas"],
+      ["servicios_gasred_pct", "% Hogares con gas natural por red"],
+    ],
+    defaultVar: "servicios_gasred_pct",
+  },
   internet: {
     label: "Sociales · Internet fija (ENACOM)",
     year: 2025,
@@ -502,7 +514,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","pba_circuitos","internet","transporte",
+  "mineria","pesca","pobreza","pba_circuitos","internet","transporte","servicios",
   "_swing","_cluster","_lisa"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
@@ -2612,6 +2624,22 @@ async function renderDashboard() {
       <div class="dash-val">${c.val}</div>
       <div class="dash-meta">${c.meta || ""}</div>
     </div>`).join("");
+
+  // Tabla detallada Presupuesto
+  try {
+    const r = await fetch("../data/web/presupuesto_nacional.json");
+    if (r.ok) {
+      const d = await r.json();
+      const top = d.top_jurisdicciones.slice(0, 10);
+      $("#dash-presupuesto").innerHTML = top.map((j, i) => `
+        <div class="rk-row">
+          <span class="pos">${i + 1}</span>
+          <span class="nom">${j.jurisdiccion_desc.slice(0, 30)}
+            <span class="ctx">Ejecución ${j.ejecucion_pct.toFixed(0)}%</span></span>
+          <span class="val">${j.vigente_share.toFixed(1)}%</span>
+        </div>`).join("");
+    }
+  } catch {}
 }
 
 async function renderDashRank() {
