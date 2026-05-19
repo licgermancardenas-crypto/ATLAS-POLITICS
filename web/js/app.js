@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518l · mortalidad fetal DEIS + energía generación · 27 datasets");
+console.log("[ATLAS] build 20260518m · ganadería bovina SENASA · 28 datasets");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -250,6 +250,20 @@ const DATASETS = {
     ],
     defaultVar: "egresos_2020_por_1k_hab",
   },
+  ganaderia: {
+    label: "Economía · Ganadería bovina 2019",
+    year: 2019,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/ganaderia_provincia.json`,
+    vars: [
+      ["bovinos_total", "Cabezas bovinas totales"],
+      ["bovinos_per_capita", "Bovinos per cápita"],
+      ["bovinos_vacas", "Vacas"],
+      ["bovinos_terneros", "Terneros"],
+      ["bovinos_novillos", "Novillos"],
+    ],
+    defaultVar: "bovinos_per_capita",
+  },
   agro: {
     label: "Economía · Producción agrícola 2024",
     year: 2024,
@@ -369,7 +383,7 @@ const indicadores = Object.fromEntries(["censo",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
-  "trade_bloques","egresos_pba","energia","_swing"].map(k => [k, {}]));
+  "trade_bloques","egresos_pba","energia","ganaderia","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
