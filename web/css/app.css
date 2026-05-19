@@ -11,6 +11,19 @@
   --danger:#ff6b6b;
   --map-bg:#0a1322;
 }
+body.theme-light{
+  --bg:#f5f7fb;
+  --bg-2:#eef1f7;
+  --panel:#ffffff;
+  --line:#d3dae8;
+  --text:#1a2236;
+  --muted:#5b6679;
+  --accent:#2563eb;
+  --accent-2:#059669;
+  --warn:#d97706;
+  --danger:#dc2626;
+  --map-bg:#dde6f0;
+}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{

@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519e · breakpoints series + leyenda categórica LISA/cluster");
+console.log("[ATLAS] build 20260519f · tema claro/oscuro + heatmap ΔR 2019→2023");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -2694,6 +2694,15 @@ async function computeHeatmap() {
       for (const k of keys) rowDefs.push({ label: `${ds}:${k}`, ds, key: k });
     }
     for (const k of CENSO_VARS) colDefs.push({ label: labelFor(k), ds: "censo", key: k });
+  } else if (scope === "delta_2019_2023") {
+    // Calculo doble: R 2019 vs Censo y R 2023 vs Censo. Matriz = R23 - R19.
+    await loadIndicadores(level, "2019_generales");
+    await loadIndicadores(level, "2023_generales");
+    const coals = ["pj_pct", "jxc_pct", "lla_pct", "izq_pct", "participacion"];
+    for (const c of coals) rowDefs.push({ label: c.replace('_pct',''), key: c, ds: "delta_marker" });
+    for (const k of CENSO_VARS) colDefs.push({ label: labelFor(k), ds: "censo", key: k });
+    // Marcador: compute differently below
+    var DELTA_MODE = true;
   } else {
     // "Todo ↔ % LLA / PJ 2023"
     const target = scope === "todo_vs_lla" ? "lla_pct" : "pj_pct";
@@ -2716,6 +2725,23 @@ async function computeHeatmap() {
   const codes = [...allCodes];
 
   const matrix = rowDefs.map(rd => colDefs.map(cd => {
+    if (rd.ds === "delta_marker") {
+      // ΔR = R(2023) - R(2019)
+      const get19 = (code) => indicadores["2019_generales"]?.[level]?.[code]?.[rd.key];
+      const get23 = (code) => indicadores["2023_generales"]?.[level]?.[code]?.[rd.key];
+      const pair19 = [], pair23 = [];
+      for (const code of codes) {
+        const y = getVal(cd, code);
+        const x19 = get19(code), x23 = get23(code);
+        if (y == null) continue;
+        if (x19 != null && isFinite(x19)) pair19.push([x19, y]);
+        if (x23 != null && isFinite(x23)) pair23.push([x23, y]);
+      }
+      const r19 = pair19.length >= 5 ? pearsonR(pair19) : null;
+      const r23 = pair23.length >= 5 ? pearsonR(pair23) : null;
+      if (r19 == null || r23 == null) return null;
+      return r23 - r19;
+    }
     const pairs = [];
     for (const code of codes) {
       const x = getVal(rd, code), y = getVal(cd, code);
@@ -3174,6 +3200,35 @@ $("#swing-apply").addEventListener("click", applySwing);
 });
 
 $("#lbl-toggle").addEventListener("click", toggleLabels);
+
+// Theme toggle (dark/light)
+const themeKey = "atlas-theme";
+function applyTheme(t) {
+  document.body.classList.toggle("theme-light", t === "light");
+  $("#theme-toggle").textContent = t === "light" ? "☀️" : "🌙";
+  // Switch tile layer
+  if (t === "light") {
+    map.eachLayer(l => { if (l._url && l._url.includes("dark")) map.removeLayer(l); });
+    if (!window._lightTiles) {
+      window._lightTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19, attribution: '&copy; CARTO &copy; OSM' });
+    }
+    window._lightTiles.addTo(map);
+  } else {
+    if (window._lightTiles) map.removeLayer(window._lightTiles);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+      { maxZoom: 19, attribution: '&copy; CARTO &copy; OSM' }).addTo(map);
+  }
+}
+$("#theme-toggle").addEventListener("click", () => {
+  const cur = document.body.classList.contains("theme-light") ? "light" : "dark";
+  const next = cur === "light" ? "dark" : "light";
+  localStorage.setItem(themeKey, next);
+  applyTheme(next);
+});
+// Restore from localStorage
+const savedTheme = localStorage.getItem(themeKey);
+if (savedTheme === "light") setTimeout(() => applyTheme("light"), 200);
 
 // -- Init --
 async function showCountryKpis() {
