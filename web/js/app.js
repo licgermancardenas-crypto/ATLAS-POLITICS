@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519h · Sankey clusters + onboarding tour");
+console.log("[ATLAS] build 20260519i · Spider chart radar en Comparar");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -3012,10 +3012,58 @@ function pinCurrent() {
   switchTab("comparar");
 }
 
+function renderRadar() {
+  const svg = $("#cmp-radar");
+  if (!svg || !compared.length) { if (svg) svg.innerHTML = ""; return; }
+  // Selección variables numéricas comunes con valor en TODAS las features
+  const keys = new Set();
+  compared.forEach(c => Object.keys(c.ind).forEach(k => keys.add(k)));
+  const numericKeys = [...keys].filter(k =>
+    !k.startsWith("_") &&
+    compared.every(c => typeof c.ind[k] === "number" && isFinite(c.ind[k]))
+  ).slice(0, 8); // máximo 8 ejes
+  if (numericKeys.length < 3) { svg.innerHTML = `<text x="160" y="140" fill="#8893ad" font-size="11" text-anchor="middle">Necesitás ≥3 vars comunes</text>`; return; }
+
+  const W = 320, H = 280, cx = W/2, cy = H/2, R = Math.min(W, H) * 0.36;
+  const N = numericKeys.length;
+  // Normalizar por max(abs) para cada eje
+  const maxAbs = numericKeys.map(k => Math.max(...compared.map(c => Math.abs(c.ind[k]))) || 1);
+  const angle = i => (i / N) * Math.PI * 2 - Math.PI / 2;
+  const point = (i, r) => [cx + Math.cos(angle(i)) * R * r, cy + Math.sin(angle(i)) * R * r];
+
+  // Grid concéntrico
+  const grid = [0.25, 0.5, 0.75, 1.0].map(r =>
+    `<polygon points="${numericKeys.map((_, i) => point(i, r).map(v => v.toFixed(1)).join(',')).join(' ')}"
+      fill="none" stroke="#222b41" stroke-width="0.5"/>`).join("");
+  // Ejes radiales + labels
+  const axes = numericKeys.map((k, i) => {
+    const [x, y] = point(i, 1);
+    const [lx, ly] = point(i, 1.13);
+    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#222b41" stroke-width="0.5"/>
+      <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="#8893ad" font-size="8" text-anchor="middle">${labelFor(k).slice(0,14)}</text>`;
+  }).join("");
+  // Polígonos de features
+  const palette = ["#5aa3ff", "#ff6b6b", "#7df2c6", "#ffb454"];
+  const polys = compared.map((c, ci) => {
+    const pts = numericKeys.map((k, i) => point(i, c.ind[k] / maxAbs[i]).map(v => v.toFixed(1)).join(",")).join(" ");
+    return `<polygon points="${pts}" fill="${palette[ci % palette.length]}" fill-opacity="0.18"
+      stroke="${palette[ci % palette.length]}" stroke-width="1.5"/>`;
+  }).join("");
+  // Legenda
+  const legend = compared.map((c, ci) => `
+    <g transform="translate(8, ${10 + ci*14})">
+      <rect width="10" height="10" fill="${palette[ci % palette.length]}" fill-opacity="0.6"/>
+      <text x="14" y="9" fill="#e8ecf6" font-size="10">${c.nombre.slice(0, 22)}</text>
+    </g>`).join("");
+
+  svg.innerHTML = grid + axes + polys + legend;
+}
+
 function renderComparar() {
   const grid = $("#cmp-grid");
   if (!compared.length) {
     grid.innerHTML = `<div style="color:var(--muted);font-size:12px">Sin features ancladas.</div>`;
+    $("#cmp-radar").innerHTML = "";
     return;
   }
   // Variables a mostrar: unión de todas las claves no internas en ind
@@ -3048,6 +3096,7 @@ function renderComparar() {
     compared.splice(parseInt(b.dataset.i), 1);
     renderComparar();
   }));
+  renderRadar();
 }
 
 $("#cmp-pin").addEventListener("click", pinCurrent);
