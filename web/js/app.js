@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260518m · ganadería bovina SENASA · 28 datasets");
+console.log("[ATLAS] build 20260518n · minería + pesca · 30 datasets totales");
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
@@ -250,6 +250,29 @@ const DATASETS = {
     ],
     defaultVar: "egresos_2020_por_1k_hab",
   },
+  mineria: {
+    label: "Economía · Minería (exportaciones)",
+    year: 2025,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/mineria_provincia.json`,
+    vars: [
+      ["mineria_exportaciones_musd", "Exportaciones mineras (M USD)"],
+      ["mineria_per_capita_usd", "Mining USD per cápita"],
+    ],
+    defaultVar: "mineria_per_capita_usd",
+  },
+  pesca: {
+    label: "Economía · Pesca marítima",
+    year: 2019,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/pesca_provincia.json`,
+    vars: [
+      ["pesca_captura_tm", "Captura (toneladas)"],
+      ["pesca_kg_per_capita", "Captura por habitante (kg)"],
+      ["pesca_puertos", "Cantidad de puertos pesqueros"],
+    ],
+    defaultVar: "pesca_captura_tm",
+  },
   ganaderia: {
     label: "Economía · Ganadería bovina 2019",
     year: 2019,
@@ -383,7 +406,8 @@ const indicadores = Object.fromEntries(["censo",
   "2023_generales","2023_balotaje","2023_diputados","2023_senadores",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
-  "trade_bloques","egresos_pba","energia","ganaderia","_swing"].map(k => [k, {}]));
+  "trade_bloques","egresos_pba","energia","ganaderia",
+  "mineria","pesca","_swing"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
 let selected = null;
