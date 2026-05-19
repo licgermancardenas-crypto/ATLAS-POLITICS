@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519q · trayectoria circuitos + internet ENACOM");
+console.log("[ATLAS] build 20260519r · Presupuesto Abierto + Transporte ministerial");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -390,6 +390,18 @@ const DATASETS = {
     ],
     defaultVar: "delitos_por_10k_hab_2023",
   },
+  transporte: {
+    label: "Economía · Subsidios al transporte público",
+    year: 2019,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/transporte_provincia.json`,
+    vars: [
+      ["transporte_subsidios_per_capita_ars", "Subsidios per cápita ($)"],
+      ["transporte_subsidios_colectivos_cd_total", "Subsidios totales ($)"],
+      ["transporte_municipios_subsidiados", "Municipios con subsidio"],
+    ],
+    defaultVar: "transporte_subsidios_per_capita_ars",
+  },
   internet: {
     label: "Sociales · Internet fija (ENACOM)",
     year: 2025,
@@ -490,7 +502,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","pba_circuitos","internet",
+  "mineria","pesca","pobreza","pba_circuitos","internet","transporte",
   "_swing","_cluster","_lisa"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
@@ -2573,6 +2585,25 @@ async function renderDashboard() {
     const data = await r.json();
     const last = data[data.length - 1];
     cards.push({ label: "Inflación interanual", val: `${last.valor}%`, meta: last.fecha });
+  } catch {}
+  // Presupuesto Nacional
+  try {
+    const r = await fetch("../data/web/presupuesto_nacional.json");
+    if (r.ok) {
+      const d = await r.json();
+      const t = d.total_vigente_ars / 1e6; // de millones de pesos a billones (T)
+      cards.push({
+        label: `Presupuesto vigente ${d.year}`,
+        val: `$${fmt1.format(t)}B`,
+        meta: `Ejecución ${d.ejecucion_pct}%`,
+      });
+      const top = d.top_jurisdicciones?.[0];
+      if (top) cards.push({
+        label: "Top jurisdicción",
+        val: top.jurisdiccion_desc.slice(0, 24),
+        meta: `${top.vigente_share.toFixed(0)}% del total`,
+      });
+    }
   } catch {}
 
   grid.innerHTML = cards.map(c => `
