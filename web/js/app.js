@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519p · histórico circuitos PBA 2011-2023 (Pres+Dip+Sen)");
+console.log("[ATLAS] build 20260519q · trayectoria circuitos + internet ENACOM");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -390,6 +390,18 @@ const DATASETS = {
     ],
     defaultVar: "delitos_por_10k_hab_2023",
   },
+  internet: {
+    label: "Sociales · Internet fija (ENACOM)",
+    year: 2025,
+    levels: ["provincias"],
+    fileFor: () => `../data/web/internet_provincia.json`,
+    vars: [
+      ["internet_accesos_por_hogar", "Accesos por hogar"],
+      ["internet_accesos_baf", "Accesos banda ancha fija"],
+      ["internet_accesos_total", "Accesos totales"],
+    ],
+    defaultVar: "internet_accesos_por_hogar",
+  },
   vacunas: {
     label: "Sociales · Vacuna SRP (Triple Viral)",
     year: 2019,
@@ -478,7 +490,7 @@ const indicadores = Object.fromEntries(["censo",
   "economia","socio","ipc","empleo","salud","educacion","vacunas",
   "pba","caba","trade","covid","pba_elec","agro",
   "trade_bloques","egresos_pba","energia","ganaderia",
-  "mineria","pesca","pobreza","pba_circuitos",
+  "mineria","pesca","pobreza","pba_circuitos","internet",
   "_swing","_cluster","_lisa"].map(k => [k, {}]));
 let activeDataset = "censo";
 let activeLevel = "pais";
@@ -914,7 +926,26 @@ async function refreshSelectedPanel(props) {
   }
 }
 
+async function renderTrayectoriaCircuito(code) {
+  // Para circuitos PBA: usa el dataset histórico con keys pres_<año>_<alianza>_pct
+  await loadIndicadores("circuitos_pba", "pba_circuitos");
+  const rec = indicadores.pba_circuitos?.circuitos_pba?.[code];
+  if (!rec) return;
+  const COAL = ["pj", "jxc", "lla", "hacemos", "izq"];
+  const years = [2011, 2015, 2019, 2023];
+  const series = {};
+  for (const c of COAL) {
+    series[c] = years.map(y => {
+      const v = rec[`pres_${y}_${c}_pct`];
+      return v != null ? { x: String(y), y: v * 100 } : null;
+    }).filter(Boolean);
+  }
+  const renderable = COAL.filter(c => series[c].length >= 2).map(c => ({ label: c, points: series[c] }));
+  if (renderable.length) renderMultiSpark(renderable, "Trayectoria Pres 2011-2023");
+}
+
 async function renderTrayectoria(code, level) {
+  if (level === "circuitos_pba") return renderTrayectoriaCircuito(code);
   // Construye serie histórica del depto a través de todas las elecciones
   if (!code || level !== "departamentos") return;
   const ELECTORAL_YEARS = [
