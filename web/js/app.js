@@ -1,5 +1,10 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519k · Dashboard nacional + rank rápido por variable");
+console.log("[ATLAS] build 20260519l · PWA service worker + offline-first");
+
+// Service worker registration
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 
 const LEVELS = {
   pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },

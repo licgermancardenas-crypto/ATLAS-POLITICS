@@ -1,0 +1,11 @@
+{
+  "name": "ATLAS politics",
+  "short_name": "ATLAS",
+  "description": "Plataforma analítica de Argentina — geografía, demografía, electoral, economía, sociales.",
+  "start_url": "/web/",
+  "display": "standalone",
+  "theme_color": "#5aa3ff",
+  "background_color": "#0b0f1a",
+  "lang": "es-AR",
+  "icons": []
+}
