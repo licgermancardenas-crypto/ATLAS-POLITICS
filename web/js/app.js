@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519t · importaciones + balanza comercial nacional");
+console.log("[ATLAS] build 20260519u · tab Insights con hallazgos automáticos");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -2539,6 +2539,129 @@ $("#cl-run").addEventListener("click", async () => {
   await runCluster();
   await renderPCABiplot();
 });
+
+// -- Insights automáticos --
+async function runInsights() {
+  const out = $("#ins-out");
+  out.innerHTML = "<div style='color:var(--muted);font-size:11px'>Computando… (esto carga 6 datasets)</div>";
+
+  // 1) Top correlaciones censo ↔ %LLA 2023
+  await Promise.all([
+    loadIndicadores("departamentos", "censo"),
+    loadIndicadores("departamentos", "2023_generales"),
+    loadIndicadores("departamentos", "2019_generales"),
+    loadIndicadores("departamentos", "ipc"),
+    loadIndicadores("departamentos", "pobreza"),
+    loadIndicadores("departamentos", "salud"),
+  ]).catch(() => {});
+
+  const censo = indicadores.censo.departamentos || {};
+  const elec2023 = indicadores["2023_generales"].departamentos || {};
+  const elec2019 = indicadores["2019_generales"].departamentos || {};
+
+  const layer = layerCache.departamentos;
+  const codes = [...new Set([...Object.keys(censo), ...Object.keys(elec2023)])];
+  const nameOf = code => {
+    let nm = code, ctx = "";
+    if (layer) layer.eachLayer(l => {
+      if (l.feature?.properties.codigo_indec === code) {
+        nm = l.feature.properties.nombre;
+        ctx = l.feature.properties.provincia || "";
+      }
+    });
+    return { nm, ctx };
+  };
+
+  // Top correlaciones censo ↔ %LLA + %PJ 2023
+  const CENSO_VARS = ["densidad_km2", "personas_por_hogar", "idx_masculinidad",
+                       "personas_por_vivienda", "personas", "hogares"];
+  const corrLLA = [], corrPJ = [];
+  for (const cv of CENSO_VARS) {
+    const pairsLLA = [], pairsPJ = [];
+    for (const code of codes) {
+      const x = censo[code]?.[cv];
+      const lla = elec2023[code]?.lla_pct;
+      const pj = elec2023[code]?.pj_pct;
+      if (x != null && isFinite(x)) {
+        if (lla != null) pairsLLA.push([x, lla]);
+        if (pj != null) pairsPJ.push([x, pj]);
+      }
+    }
+    if (pairsLLA.length >= 30) corrLLA.push({ var: cv, r: pearsonR(pairsLLA) });
+    if (pairsPJ.length >= 30) corrPJ.push({ var: cv, r: pearsonR(pairsPJ) });
+  }
+  corrLLA.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  corrPJ.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
+  // 2) Biggest swings PJ 2019 → 2023
+  const swings = [];
+  for (const code of codes) {
+    const a = elec2019[code]?.pj_pct;
+    const b = elec2023[code]?.pj_pct;
+    if (a != null && b != null) swings.push({ code, swing: b - a });
+  }
+  swings.sort((a, b) => a.swing - b.swing);
+  const peronCaida = swings.slice(0, 5);
+
+  // 3) Outliers densidad — más densos
+  const densDeptos = codes.filter(c => censo[c]?.densidad_km2 != null)
+    .map(c => ({ code: c, val: censo[c].densidad_km2 }))
+    .sort((a, b) => b.val - a.val).slice(0, 5);
+
+  // 4) Mayor brecha LLA 2023 (donde LLA fue extrema)
+  const llaTop = codes.filter(c => elec2023[c]?.lla_pct != null)
+    .map(c => ({ code: c, val: elec2023[c].lla_pct }))
+    .sort((a, b) => b.val - a.val).slice(0, 5);
+  const llaBot = codes.filter(c => elec2023[c]?.lla_pct != null)
+    .map(c => ({ code: c, val: elec2023[c].lla_pct }))
+    .sort((a, b) => a.val - b.val).slice(0, 5);
+
+  const insightCard = (title, items) => `
+    <div class="ins-card">
+      <h4>${title}</h4>
+      ${items}
+    </div>`;
+
+  const html = `
+    ${insightCard("Top correlaciones · %LLA 2023 ↔ Censo", corrLLA.slice(0, 3).map(x =>
+      `<div class="ins-row"><span>${labelFor(x.var)}</span>
+       <span class="r ${x.r >= 0 ? 'pos' : 'neg'}">${x.r >= 0 ? '+' : ''}${x.r.toFixed(3)}</span></div>`
+    ).join(""))}
+    ${insightCard("Top correlaciones · %PJ 2023 ↔ Censo", corrPJ.slice(0, 3).map(x =>
+      `<div class="ins-row"><span>${labelFor(x.var)}</span>
+       <span class="r ${x.r >= 0 ? 'pos' : 'neg'}">${x.r >= 0 ? '+' : ''}${x.r.toFixed(3)}</span></div>`
+    ).join(""))}
+    ${insightCard("Mayor caída del peronismo 2019→2023", peronCaida.map(s => {
+      const { nm, ctx } = nameOf(s.code);
+      return `<div class="ins-row clickable" data-code="${s.code}">
+        <span>${nm} <span class="ctx">${ctx}</span></span>
+        <span class="r neg">${(s.swing * 100).toFixed(1)}pp</span></div>`;
+    }).join(""))}
+    ${insightCard("Deptos más densos (hab/km²)", densDeptos.map(d => {
+      const { nm, ctx } = nameOf(d.code);
+      return `<div class="ins-row clickable" data-code="${d.code}">
+        <span>${nm} <span class="ctx">${ctx}</span></span>
+        <span class="r">${fmt.format(Math.round(d.val))}</span></div>`;
+    }).join(""))}
+    ${insightCard("Top voto LLA 2023", llaTop.map(d => {
+      const { nm, ctx } = nameOf(d.code);
+      return `<div class="ins-row clickable" data-code="${d.code}">
+        <span>${nm} <span class="ctx">${ctx}</span></span>
+        <span class="r pos">${(d.val * 100).toFixed(1)}%</span></div>`;
+    }).join(""))}
+    ${insightCard("Menor voto LLA 2023", llaBot.map(d => {
+      const { nm, ctx } = nameOf(d.code);
+      return `<div class="ins-row clickable" data-code="${d.code}">
+        <span>${nm} <span class="ctx">${ctx}</span></span>
+        <span class="r">${(d.val * 100).toFixed(1)}%</span></div>`;
+    }).join(""))}
+  `;
+  out.innerHTML = html;
+  $$(".ins-row.clickable").forEach(r => {
+    r.addEventListener("click", () => zoomToCode(r.dataset.code));
+  });
+}
+$("#ins-run").addEventListener("click", runInsights);
 
 // -- Dashboard nacional --
 async function renderDashboard() {
