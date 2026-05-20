@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260519u · tab Insights con hallazgos automáticos");
+console.log("[ATLAS] build 20260520a · Δ correlación 2019-23 + IC95 Wilson en panel");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -1139,12 +1139,29 @@ function renderKpis(ind) {
   }).join("");
 }
 
+function wilsonCI(p, n, z = 1.96) {
+  if (!n || n <= 0) return null;
+  const den = 1 + z * z / n;
+  const centro = (p + z * z / (2 * n)) / den;
+  const margen = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den;
+  return [Math.max(0, centro - margen), Math.min(1, centro + margen)];
+}
+
 function renderCompare(ind, props) {
   const wrap = $("#sel-compare");
   if (!ind || !activeVar || ind[activeVar] == null) { wrap.innerHTML = ""; return; }
   const v = ind[activeVar];
   const rows = [];
-  rows.push(`<div class="cmp-row"><span class="lbl">${labelFor(activeVar)}</span><span class="v">${fmtVal(v)}</span></div>`);
+  // Para variables % electorales: agregar IC 95% Wilson si disponemos de N
+  let icHTML = "";
+  if (isPctVar(activeVar) && /_pct$/.test(activeVar)) {
+    const n = ind.votos_pos || ind.votantes || null;
+    if (n && n > 0) {
+      const ci = wilsonCI(v, n);
+      if (ci) icHTML = `<span class="ctx" style="margin-left:6px">IC95: ${(ci[0]*100).toFixed(1)}–${(ci[1]*100).toFixed(1)}%</span>`;
+    }
+  }
+  rows.push(`<div class="cmp-row"><span class="lbl">${labelFor(activeVar)}${icHTML}</span><span class="v">${fmtVal(v)}</span></div>`);
   if (levelStats) {
     const dMean = ((v - levelStats.mean) / levelStats.mean) * 100;
     const dP50 = levelStats.p50 ? ((v - levelStats.p50) / levelStats.p50) * 100 : null;
@@ -2608,6 +2625,24 @@ async function runInsights() {
     .map(c => ({ code: c, val: censo[c].densidad_km2 }))
     .sort((a, b) => b.val - a.val).slice(0, 5);
 
+  // 3b) Cambio de correlación 2019 → 2023 con vars censales
+  const corrShifts = [];
+  for (const cv of CENSO_VARS) {
+    const p19 = [], p23 = [];
+    for (const code of codes) {
+      const x = censo[code]?.[cv];
+      if (x == null) continue;
+      const l19 = elec2019[code]?.lla_pct, l23 = elec2023[code]?.lla_pct;
+      if (l19 != null) p19.push([x, l19]);
+      if (l23 != null) p23.push([x, l23]);
+    }
+    if (p19.length >= 30 && p23.length >= 30) {
+      const r19 = pearsonR(p19), r23 = pearsonR(p23);
+      corrShifts.push({ var: cv, r19, r23, delta: r23 - r19 });
+    }
+  }
+  corrShifts.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
   // 4) Mayor brecha LLA 2023 (donde LLA fue extrema)
   const llaTop = codes.filter(c => elec2023[c]?.lla_pct != null)
     .map(c => ({ code: c, val: elec2023[c].lla_pct }))
@@ -2654,6 +2689,12 @@ async function runInsights() {
       return `<div class="ins-row clickable" data-code="${d.code}">
         <span>${nm} <span class="ctx">${ctx}</span></span>
         <span class="r">${(d.val * 100).toFixed(1)}%</span></div>`;
+    }).join(""))}
+    ${insightCard("Δ R 2019→2023 · %LLA ↔ Censo", corrShifts.slice(0, 4).map(c => {
+      const cls = c.delta >= 0 ? "pos" : "neg";
+      return `<div class="ins-row">
+        <span>${labelFor(c.var)} <span class="ctx">${c.r19.toFixed(2)} → ${c.r23.toFixed(2)}</span></span>
+        <span class="r ${cls}">${c.delta >= 0 ? '+' : ''}${c.delta.toFixed(3)}</span></div>`;
     }).join(""))}
   `;
   out.innerHTML = html;
