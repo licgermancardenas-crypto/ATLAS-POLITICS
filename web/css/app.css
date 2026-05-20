@@ -117,6 +117,37 @@ a:hover{text-decoration:underline}
 .panel{display:none;padding:16px}
 .panel.active{display:block}
 
+.ficha{margin-bottom:14px}
+.ficha-header{
+  padding-bottom:10px;border-bottom:2px solid var(--accent);margin-bottom:10px;
+}
+.ficha-header h2{margin:0;font-size:22px;color:var(--text)}
+.ficha-tipo{color:var(--muted);font-size:12px;margin-top:2px}
+.ficha-autoridades{
+  display:flex;flex-direction:column;gap:5px;
+  padding:10px;background:var(--panel);border:1px solid var(--line);
+  border-left:3px solid var(--accent-2);border-radius:6px;margin-bottom:10px;
+}
+.ficha-autoridades .auth-row{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.ficha-autoridades .auth-label{color:var(--muted);text-transform:uppercase;font-size:9px;letter-spacing:.5px}
+.ficha-autoridades .auth-val{color:var(--text);font-weight:500}
+.ficha-autoridades .auth-partido{color:var(--accent);font-size:10px;display:block;margin-top:1px}
+.ficha-section{margin-bottom:12px}
+.ficha-section:empty{display:none}
+.ficha-section h3{
+  margin:0 0 6px 0;font-size:10px;color:var(--accent-2);
+  text-transform:uppercase;letter-spacing:0.5px;font-weight:600;
+  padding-bottom:3px;border-bottom:1px solid var(--line);
+}
+.ficha-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:12px}
+.ficha-grid .fg-row{
+  background:var(--panel);border:1px solid var(--line);border-radius:5px;
+  padding:6px 8px;
+}
+.ficha-grid .fg-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.ficha-grid .fg-val{color:var(--accent-2);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.ficha-grid .fg-meta{color:var(--muted);font-size:10px;margin-top:1px}
+
 #panel-info h2{margin:0 0 4px 0;font-size:20px}
 .sel-meta{color:var(--muted);font-size:12px;margin-bottom:14px;line-height:1.45}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}

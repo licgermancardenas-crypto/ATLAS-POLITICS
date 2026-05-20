@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520f-drilldown · drill-down real con filtro de hijos + breadcrumb");
+console.log("[ATLAS] build 20260520g-ficha · ficha tipo Wikipedia + 67 intendentes hardcoded");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -1075,6 +1075,7 @@ async function refreshSelectedPanel(props) {
   renderAllDatasets(code, selectedLevel).catch(() => {});
   renderSimilar(code, selectedLevel).catch(() => {});
   renderAutoridades(code);
+  renderFicha(code, selectedLevel, props).catch(() => {});
   switchTab("info");
   loadFeatureSerieIfAvailable(code).catch(() => {});
   // Si NO hay serie embebida (sparkline ya renderizado por renderSpark), intentar trayectoria electoral
@@ -1138,6 +1139,127 @@ async function renderTrayectoria(code, level) {
     label: c.replace("_pct", ""), points: series[c],
   }));
   renderMultiSpark(renderable, "Trayectoria electoral 2015-2023");
+}
+
+async function renderFicha(code, level, props) {
+  if (!code) return;
+  // Limpio el "código X" de meta
+  const meta = [];
+  if (props?.tipo) meta.push(props.tipo);
+  if (props?.provincia && props.provincia !== "IGN") meta.push(props.provincia);
+  if (props?.departamento) meta.push(props.departamento);
+  $("#sel-meta").textContent = meta.join(" · ") || "—";
+
+  // 1) Autoridades destacadas
+  const auth = $("#ficha-auth");
+  const provCode = code.substring(0, 2);
+  const ints = autoridades?.intendentes_por_depto?.[code];
+  const gob = autoridades?.gobernadores_por_provincia?.[provCode];
+  if (ints || gob) {
+    const rows = [];
+    if (ints) {
+      const tipo = ints._tipo === "Junta Comunal" ? "Junta Comunal" : "Intendente";
+      rows.push(`<div class="auth-row"><span class="auth-label">${tipo}</span>
+        <div><span class="auth-val">${ints.intendente}</span>
+        ${ints.partido_intendente ? `<span class="auth-partido">${ints.partido_intendente}</span>` : ""}</div></div>`);
+    }
+    if (gob) {
+      rows.push(`<div class="auth-row"><span class="auth-label">Gobernador</span>
+        <div><span class="auth-val">${gob.gobernador}</span>
+        ${gob.partido_gob ? `<span class="auth-partido">${gob.partido_gob}</span>` : ""}</div></div>`);
+    }
+    auth.innerHTML = rows.join("");
+    auth.style.display = "block";
+  } else {
+    auth.style.display = "none";
+  }
+
+  // 2) Sección Población (Censo 2022)
+  await loadIndicadores(level === "pais" ? "pais" : level, "censo");
+  const censo = level === "pais" ? await loadPaisTotales() : indicadores.censo?.[level]?.[code];
+  const popHTML = censo ? `
+    <h3>Población · Censo 2022</h3>
+    <div class="ficha-grid">
+      ${censo.personas != null ? `<div class="fg-row"><div class="fg-label">Población</div><div class="fg-val">${fmt.format(censo.personas)}</div><div class="fg-meta">habitantes</div></div>` : ""}
+      ${censo.hogares != null ? `<div class="fg-row"><div class="fg-label">Hogares</div><div class="fg-val">${fmt.format(censo.hogares)}</div></div>` : ""}
+      ${censo.viv_part_h != null ? `<div class="fg-row"><div class="fg-label">Viviendas habitadas</div><div class="fg-val">${fmt.format(censo.viv_part_h)}</div></div>` : ""}
+      ${censo.densidad_km2 != null ? `<div class="fg-row"><div class="fg-label">Densidad</div><div class="fg-val">${fmt.format(Math.round(censo.densidad_km2))}</div><div class="fg-meta">hab/km²</div></div>` : ""}
+      ${censo.area_km2 != null ? `<div class="fg-row"><div class="fg-label">Área</div><div class="fg-val">${fmt.format(Math.round(censo.area_km2))}</div><div class="fg-meta">km²</div></div>` : ""}
+      ${censo.personas_por_hogar != null ? `<div class="fg-row"><div class="fg-label">Pers/hogar</div><div class="fg-val">${fmt2.format(censo.personas_por_hogar)}</div></div>` : ""}
+    </div>` : "";
+  $("#ficha-pop").innerHTML = popHTML;
+
+  // 3) Sección Elecciones (Presidente 2023)
+  let elecHTML = "";
+  if (level === "provincias" || level === "departamentos") {
+    const [g, b, d] = await Promise.all([
+      loadIndicadores(level, "2023_generales"),
+      loadIndicadores(level, "2023_balotaje"),
+      loadIndicadores(level, "2019_generales"),
+    ]);
+    const r23g = g?.[code], r23b = b?.[code], r19 = d?.[code];
+    if (r23g || r23b) {
+      elecHTML = `<h3>Elecciones Presidenciales</h3><div class="ficha-grid">`;
+      if (r23g) {
+        const lla = r23g.lla_pct, pj = r23g.pj_pct, jxc = r23g.jxc_pct;
+        elecHTML += `
+          <div class="fg-row"><div class="fg-label">2023 Generales</div>
+            <div class="fg-val">LLA ${lla ? (lla*100).toFixed(1) : '—'}%</div>
+            <div class="fg-meta">UP ${pj ? (pj*100).toFixed(1) : '—'}% · JxC ${jxc ? (jxc*100).toFixed(1) : '—'}%</div>
+          </div>`;
+      }
+      if (r23b) {
+        elecHTML += `
+          <div class="fg-row"><div class="fg-label">2023 Balotaje</div>
+            <div class="fg-val">LLA ${r23b.lla_pct ? (r23b.lla_pct*100).toFixed(1) : '—'}%</div>
+            <div class="fg-meta">UP ${r23b.pj_pct ? (r23b.pj_pct*100).toFixed(1) : '—'}%</div>
+          </div>`;
+      }
+      if (r19) {
+        elecHTML += `
+          <div class="fg-row"><div class="fg-label">2019 Generales</div>
+            <div class="fg-val">FdT ${r19.pj_pct ? (r19.pj_pct*100).toFixed(1) : '—'}%</div>
+            <div class="fg-meta">JxC ${r19.jxc_pct ? (r19.jxc_pct*100).toFixed(1) : '—'}%</div>
+          </div>`;
+      }
+      elecHTML += `</div>`;
+    }
+  }
+  $("#ficha-elec").innerHTML = elecHTML;
+
+  // 4) Servicios habitacionales (provincial)
+  let servHTML = "";
+  if (level === "provincias" || level === "departamentos") {
+    const serv = await loadIndicadores("provincias", "servicios");
+    const s = serv?.[provCode];
+    if (s) {
+      servHTML = `<h3>Servicios habitacionales (provincial)</h3><div class="ficha-grid">
+        ${s.servicios_agua_pct ? `<div class="fg-row"><div class="fg-label">Agua corriente</div><div class="fg-val">${s.servicios_agua_pct.toFixed(0)}%</div></div>` : ""}
+        ${s.servicios_cloacas_pct ? `<div class="fg-row"><div class="fg-label">Cloacas</div><div class="fg-val">${s.servicios_cloacas_pct.toFixed(0)}%</div></div>` : ""}
+        ${s.servicios_gasred_pct ? `<div class="fg-row"><div class="fg-label">Gas natural por red</div><div class="fg-val">${s.servicios_gasred_pct.toFixed(0)}%</div></div>` : ""}
+      </div>`;
+    }
+  }
+  $("#ficha-servicios").innerHTML = servHTML;
+
+  // 5) Económico-social
+  let econHTML = "";
+  if (level === "provincias" || level === "departamentos") {
+    const [sal, edu, mor] = await Promise.all([
+      loadIndicadores("provincias", "salud"),
+      loadIndicadores("provincias", "educacion"),
+      loadIndicadores("provincias", "socio"),
+    ]);
+    const salud = sal?.[provCode], educ = edu?.[provCode], mort = mor?.[provCode];
+    if (salud || educ || mort) {
+      econHTML = `<h3>Salud · Educación (provincial)</h3><div class="ficha-grid">
+        ${salud?.establecimientos_salud_total ? `<div class="fg-row"><div class="fg-label">Establ. de salud</div><div class="fg-val">${fmt.format(salud.establecimientos_salud_total)}</div><div class="fg-meta">${salud.establecimientos_por_10k_hab?.toFixed(1)} por 10k hab</div></div>` : ""}
+        ${educ?.escuelas_total ? `<div class="fg-row"><div class="fg-label">Escuelas</div><div class="fg-val">${fmt.format(educ.escuelas_total)}</div><div class="fg-meta">${educ.pct_estatal?.toFixed(0)}% estatales</div></div>` : ""}
+        ${mort?.mortalidad_infantil ? `<div class="fg-row"><div class="fg-label">Mortalidad infantil</div><div class="fg-val">${mort.mortalidad_infantil.toFixed(1)}‰</div></div>` : ""}
+      </div>`;
+    }
+  }
+  $("#ficha-econ").innerHTML = econHTML;
 }
 
 function renderAutoridades(code) {

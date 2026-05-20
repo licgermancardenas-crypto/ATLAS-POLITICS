@@ -1,18 +1,16 @@
 {
   "intendentes_por_depto": {
     "06861": {
-      "intendente": "Jorge Macri",
-      "partido_intendente": "Propuesta Republicana",
-      "wikidata_id_muni": "Q2099330",
-      "wikidata_id_int": "Q5935527",
-      "_match": "Partido de Vicente López"
+      "intendente": "Jorge Macri (reemplazó)",
+      "partido_intendente": "PRO",
+      "_municipio": "Vicente López",
+      "_source": "manual_2026"
     },
     "06412": {
-      "intendente": "Mario Alberto Ishii",
-      "partido_intendente": "Frente para la Victoria",
-      "wikidata_id_muni": "Q2329785",
-      "wikidata_id_int": "Q9029098",
-      "_match": "Partido de José C. Paz"
+      "intendente": "Mario Ishii",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "José C. Paz",
+      "_source": "manual_2026"
     },
     "06658": {
       "intendente": "Mayra Mendoza",
@@ -43,11 +41,10 @@
       "_match": "Mercedes"
     },
     "06028": {
-      "intendente": "Mariano Cascallares",
-      "partido_intendente": "Partido Justicialista",
-      "wikidata_id_muni": "Q1399432",
-      "wikidata_id_int": "Q20990904",
-      "_match": "Partido de Almirante Brown"
+      "intendente": "Jorge Ferraresi",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Avellaneda",
+      "_source": "manual_2026"
     },
     "06679": {
       "intendente": "Javier Ulises Reynoso",
@@ -55,130 +52,523 @@
       "wikidata_id_muni": "Q2149622",
       "wikidata_id_int": "Q21704719",
       "_match": "Partido de Rivadavia"
+    },
+    "06035": {
+      "intendente": "Juan Patricio Mussi",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Berazategui",
+      "_source": "manual_2026"
+    },
+    "06091": {
+      "intendente": "Mariano Cascallares",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Brown (Almirante)",
+      "_source": "manual_2026"
+    },
+    "06119": {
+      "intendente": "Fernando Gray",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Echeverría (Esteban)",
+      "_source": "manual_2026"
+    },
+    "06245": {
+      "intendente": "Andrés Watson",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Florencio Varela",
+      "_source": "manual_2026"
+    },
+    "06270": {
+      "intendente": "Fernando Moreira",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "General San Martín",
+      "_source": "manual_2026"
+    },
+    "06274": {
+      "intendente": "Damián Selci",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Hurlingham",
+      "_source": "manual_2026"
+    },
+    "06371": {
+      "intendente": "Fernando Espinoza",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "La Matanza",
+      "_source": "manual_2026"
+    },
+    "06408": {
+      "intendente": "Julián Álvarez",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Lanús",
+      "_source": "manual_2026"
+    },
+    "06410": {
+      "intendente": "Federico Otermín",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Lomas de Zamora",
+      "_source": "manual_2026"
+    },
+    "06441": {
+      "intendente": "Leonardo Nardini",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Malvinas Argentinas",
+      "_source": "manual_2026"
+    },
+    "06515": {
+      "intendente": "Gustavo Menéndez",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Merlo",
+      "_source": "manual_2026"
+    },
+    "06525": {
+      "intendente": "Mariel Fernández",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Moreno",
+      "_source": "manual_2026"
+    },
+    "06539": {
+      "intendente": "Lucas Ghi",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Morón",
+      "_source": "manual_2026"
+    },
+    "06560": {
+      "intendente": "Mayra Mendoza",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Quilmes",
+      "_source": "manual_2026"
+    },
+    "06568": {
+      "intendente": "Juan Andreotti",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "San Fernando",
+      "_source": "manual_2026"
+    },
+    "06756": {
+      "intendente": "Ramón Lanús",
+      "partido_intendente": "PRO",
+      "_municipio": "San Isidro",
+      "_source": "manual_2026"
+    },
+    "06760": {
+      "intendente": "Jaime Méndez",
+      "partido_intendente": "Juntos por el Cambio",
+      "_municipio": "San Miguel",
+      "_source": "manual_2026"
+    },
+    "06778": {
+      "intendente": "Nicolás Mantegazza",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "San Vicente",
+      "_source": "manual_2026"
+    },
+    "06805": {
+      "intendente": "Julio Zamora",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Tigre",
+      "_source": "manual_2026"
+    },
+    "06840": {
+      "intendente": "Diego Valenzuela",
+      "partido_intendente": "PRO",
+      "_municipio": "Tres de Febrero",
+      "_source": "manual_2026"
+    },
+    "06490": {
+      "intendente": "Ricardo Curutchet",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Marcos Paz",
+      "_source": "manual_2026"
+    },
+    "10035": {
+      "intendente": "Gustavo Saadi",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "San Fernando del Valle de Catamarca",
+      "_source": "manual_2026"
+    },
+    "14014": {
+      "intendente": "Daniel Passerini",
+      "partido_intendente": "Hacemos Unidos por Córdoba",
+      "_municipio": "Capital (Córdoba)",
+      "_source": "manual_2026"
+    },
+    "18021": {
+      "intendente": "Eduardo Tassano",
+      "partido_intendente": "ECO+Vamos Corrientes",
+      "_municipio": "Capital (Corrientes)",
+      "_source": "manual_2026"
+    },
+    "22014": {
+      "intendente": "Roy Nikisch",
+      "partido_intendente": "Juntos por el Cambio",
+      "_municipio": "San Fernando (Resistencia)",
+      "_source": "manual_2026"
+    },
+    "26056": {
+      "intendente": "Damián Biss",
+      "partido_intendente": "Juntos por el Cambio",
+      "_municipio": "Rawson",
+      "_source": "manual_2026"
+    },
+    "30084": {
+      "intendente": "Rosario Romero",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Paraná",
+      "_source": "manual_2026"
+    },
+    "34014": {
+      "intendente": "Jorge Jofré",
+      "partido_intendente": "Frente de la Victoria",
+      "_municipio": "Formosa",
+      "_source": "manual_2026"
+    },
+    "38007": {
+      "intendente": "Raúl Jorge",
+      "partido_intendente": "Cambia Jujuy",
+      "_municipio": "San Salvador de Jujuy",
+      "_source": "manual_2026"
+    },
+    "42007": {
+      "intendente": "Luciano Di Nápoli",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "Santa Rosa",
+      "_source": "manual_2026"
+    },
+    "46028": {
+      "intendente": "Gustavo Robles",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "La Rioja",
+      "_source": "manual_2026"
+    },
+    "50028": {
+      "intendente": "Ulpiano Suárez",
+      "partido_intendente": "Cambia Mendoza",
+      "_municipio": "Capital (Mendoza)",
+      "_source": "manual_2026"
+    },
+    "54042": {
+      "intendente": "Leonardo Stelatto",
+      "partido_intendente": "Frente Renovador (Misiones)",
+      "_municipio": "Posadas",
+      "_source": "manual_2026"
+    },
+    "58028": {
+      "intendente": "Mariano Gaido",
+      "partido_intendente": "MPN",
+      "_municipio": "Confluencia (Neuquén)",
+      "_source": "manual_2026"
+    },
+    "62098": {
+      "intendente": "Pedro Pesatti",
+      "partido_intendente": "Juntos Somos Río Negro",
+      "_municipio": "Capital (Viedma)",
+      "_source": "manual_2026"
+    },
+    "66028": {
+      "intendente": "Emiliano Durand",
+      "partido_intendente": "Mejor Juntos",
+      "_municipio": "Capital (Salta)",
+      "_source": "manual_2026"
+    },
+    "70028": {
+      "intendente": "Susana Laciar",
+      "partido_intendente": "Juntos por el Cambio",
+      "_municipio": "Capital (San Juan)",
+      "_source": "manual_2026"
+    },
+    "74014": {
+      "intendente": "Gastón Hissa",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "San Luis (Capital)",
+      "_source": "manual_2026"
+    },
+    "78014": {
+      "intendente": "Pablo Grasso",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "Río Gallegos",
+      "_source": "manual_2026"
+    },
+    "82084": {
+      "intendente": "Juan Pablo Poletti",
+      "partido_intendente": "Unidos para Cambiar Santa Fe",
+      "_municipio": "Capital (Santa Fe)",
+      "_source": "manual_2026"
+    },
+    "86014": {
+      "intendente": "Norma Fuentes",
+      "partido_intendente": "Frente Cívico por Santiago",
+      "_municipio": "Capital (Santiago)",
+      "_source": "manual_2026"
+    },
+    "94007": {
+      "intendente": "Martín Pérez",
+      "partido_intendente": "Forja",
+      "_municipio": "Río Grande",
+      "_source": "manual_2026"
+    },
+    "94015": {
+      "intendente": "Walter Vuoto",
+      "partido_intendente": "Frente de Todos",
+      "_municipio": "Ushuaia",
+      "_source": "manual_2026"
+    },
+    "90007": {
+      "intendente": "Rossana Chahla",
+      "partido_intendente": "Frente Tucumán Primero",
+      "_municipio": "Capital (Tucumán)",
+      "_source": "manual_2026"
+    },
+    "02007": {
+      "intendente": "Vivian Bourg",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 1",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02014": {
+      "intendente": "Verónica Sangiao",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 2",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02021": {
+      "intendente": "Mariano Bartolomé",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 3",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02028": {
+      "intendente": "Liliana Chernajovsky",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Comuna 4",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02035": {
+      "intendente": "Maite Diez",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 5",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02042": {
+      "intendente": "Lucrecia Solivelles",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 6",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02049": {
+      "intendente": "Ezequiel Pazos",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 7",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02056": {
+      "intendente": "María Magdalena Tinto",
+      "partido_intendente": "Unión por la Patria",
+      "_municipio": "Comuna 8",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02063": {
+      "intendente": "Roberto Salcedo",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 9",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02070": {
+      "intendente": "Gimena Villafruela",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 10",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02077": {
+      "intendente": "Juan Loutaif",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 11",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02084": {
+      "intendente": "Federico Otero",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 12",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02091": {
+      "intendente": "Mercedes Méndez",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 13",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02098": {
+      "intendente": "Federico Cingolani",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 14",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
+    },
+    "02105": {
+      "intendente": "Daniel Lipovetzky",
+      "partido_intendente": "Vamos por Más",
+      "_municipio": "Comuna 15",
+      "_source": "manual_2026",
+      "_tipo": "Junta Comunal"
     }
   },
   "gobernadores_por_provincia": {
     "66": {
       "gobernador": "Gustavo Sáenz",
-      "partido_gob": "",
-      "wikidata_id_gob": "Q21002940",
-      "_match": "Provincia de Salta"
+      "partido_gob": "Gana Salta",
+      "_provincia": "Salta",
+      "_source": "manual_2026"
     },
     "38": {
       "gobernador": "Carlos Sadir",
-      "partido_gob": "Unión Cívica Radical",
-      "wikidata_id_gob": "Q118596781",
-      "_match": "Provincia de Jujuy"
+      "partido_gob": "Cambia Jujuy",
+      "_provincia": "Jujuy",
+      "_source": "manual_2026"
     },
     "10": {
       "gobernador": "Raúl Jalil",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q19760254",
-      "_match": "Provincia de Catamarca"
+      "partido_gob": "Frente de Todos",
+      "_provincia": "Catamarca",
+      "_source": "manual_2026"
     },
     "46": {
       "gobernador": "Ricardo Quintela",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q72707787",
-      "_match": "Provincia de La Rioja"
+      "partido_gob": "PJ",
+      "_provincia": "La Rioja",
+      "_source": "manual_2026"
     },
     "82": {
       "gobernador": "Maximiliano Pullaro",
-      "partido_gob": "Unión Cívica Radical",
-      "wikidata_id_gob": "Q28092390",
-      "_match": "Provincia de Santa Fe"
+      "partido_gob": "UCR/Unidos",
+      "_provincia": "Santa Fe",
+      "_source": "manual_2026"
     },
     "30": {
       "gobernador": "Rogelio Frigerio",
-      "partido_gob": "Propuesta Republicana",
-      "wikidata_id_gob": "Q11184187",
-      "_match": "Provincia de Entre Ríos"
+      "partido_gob": "Juntos por el Cambio",
+      "_provincia": "Entre Ríos",
+      "_source": "manual_2026"
     },
     "58": {
       "gobernador": "Rolando Figueroa",
-      "partido_gob": "Movimiento Popular Neuquino",
-      "wikidata_id_gob": "Q30243948",
-      "_match": "Provincia de Neuquén"
+      "partido_gob": "Comunidad/MPN",
+      "_provincia": "Neuquén",
+      "_source": "manual_2026"
     },
     "74": {
       "gobernador": "Claudio Poggi",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q4838522",
-      "_match": "Provincia de San Luis"
+      "partido_gob": "Avanzar",
+      "_provincia": "San Luis",
+      "_source": "manual_2026"
     },
     "78": {
       "gobernador": "Claudio Vidal",
-      "partido_gob": "Somos Energía para Renovar Santa Cruz",
-      "wikidata_id_gob": "Q111481645",
-      "_match": "Provincia de Santa Cruz"
+      "partido_gob": "SER Santa Cruz",
+      "_provincia": "Santa Cruz",
+      "_source": "manual_2026"
     },
     "62": {
       "gobernador": "Alberto Weretilneck",
-      "partido_gob": "Juntos Somos Río Negro",
-      "wikidata_id_gob": "Q3740202",
-      "_match": "Provincia de Río Negro"
+      "partido_gob": "Juntos Somos RN",
+      "_provincia": "Río Negro",
+      "_source": "manual_2026"
     },
     "06": {
       "gobernador": "Axel Kicillof",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q3754443",
-      "_match": "Provincia de Buenos Aires"
+      "partido_gob": "Unión por la Patria",
+      "_provincia": "Buenos Aires",
+      "_source": "manual_2026"
     },
     "22": {
-      "gobernador": "Juan Carlos Bacileff Ivanoff",
-      "partido_gob": "",
-      "wikidata_id_gob": "Q5849619",
-      "_match": "Provincia de Chaco"
+      "gobernador": "Leandro Zdero",
+      "partido_gob": "Juntos por el Cambio",
+      "_provincia": "Chaco",
+      "_source": "manual_2026"
     },
     "54": {
       "gobernador": "Hugo Passalacqua",
-      "partido_gob": "Partido de la Concordia Social",
-      "wikidata_id_gob": "Q18224574",
-      "_match": "Provincia de Misiones"
+      "partido_gob": "Frente Renovador (Mis)",
+      "_provincia": "Misiones",
+      "_source": "manual_2026"
     },
     "26": {
-      "gobernador": "Ignacio Agustín Torres",
-      "partido_gob": "",
-      "wikidata_id_gob": "Q104433320",
-      "_match": "Provincia de Chubut"
+      "gobernador": "Ignacio Torres",
+      "partido_gob": "Juntos por el Cambio",
+      "_provincia": "Chubut",
+      "_source": "manual_2026"
     },
     "34": {
-      "gobernador": "Gildo PENEEE",
-      "partido_gob": "Frente para la Victoria",
-      "wikidata_id_gob": "Q1524240",
-      "_match": "Provincia de Formosa"
+      "gobernador": "Gildo Insfrán",
+      "partido_gob": "PJ",
+      "_provincia": "Formosa",
+      "_source": "manual_2026"
     },
     "50": {
       "gobernador": "Alfredo Cornejo",
-      "partido_gob": "Unión Cívica Radical",
-      "wikidata_id_gob": "Q5668101",
-      "_match": "Provincia de Mendoza"
+      "partido_gob": "Cambia Mendoza",
+      "_provincia": "Mendoza",
+      "_source": "manual_2026"
     },
     "42": {
-      "gobernador": "Sergio Raúl Ziliotto",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q21856301",
-      "_match": "Provincia de La Pampa"
+      "gobernador": "Sergio Ziliotto",
+      "partido_gob": "PJ",
+      "_provincia": "La Pampa",
+      "_source": "manual_2026"
     },
     "14": {
       "gobernador": "Martín Llaryora",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q6002748",
-      "_match": "Provincia de Córdoba"
+      "partido_gob": "Hacemos Unidos",
+      "_provincia": "Córdoba",
+      "_source": "manual_2026"
     },
     "70": {
       "gobernador": "Marcelo Orrego",
-      "partido_gob": "",
-      "wikidata_id_gob": "Q62000019",
-      "_match": "Provincia de San Juan"
+      "partido_gob": "Cambia San Juan",
+      "_provincia": "San Juan",
+      "_source": "manual_2026"
     },
     "90": {
       "gobernador": "Osvaldo Jaldo",
-      "partido_gob": "Partido Justicialista",
-      "wikidata_id_gob": "Q108611599",
-      "_match": "Provincia de Tucumán"
+      "partido_gob": "PJ Tucumán",
+      "_provincia": "Tucumán",
+      "_source": "manual_2026"
+    },
+    "02": {
+      "gobernador": "Jorge Macri",
+      "partido_gob": "PRO",
+      "_provincia": "CABA",
+      "_source": "manual_2026"
+    },
+    "18": {
+      "gobernador": "Gustavo Valdés",
+      "partido_gob": "ECO+Vamos",
+      "_provincia": "Corrientes",
+      "_source": "manual_2026"
+    },
+    "86": {
+      "gobernador": "Gerardo Zamora",
+      "partido_gob": "Frente Cívico",
+      "_provincia": "Santiago del Estero",
+      "_source": "manual_2026"
+    },
+    "94": {
+      "gobernador": "Gustavo Melella",
+      "partido_gob": "Forja/PJ",
+      "_provincia": "Tierra del Fuego",
+      "_source": "manual_2026"
     }
   },
-  "fuente": "Wikidata SPARQL · query.wikidata.org",
+  "fuente": "Wikidata + hardcoded manual (verificar contra sitios oficiales)",
   "actualizado": "2026-05-20"
 }
