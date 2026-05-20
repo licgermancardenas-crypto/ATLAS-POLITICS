@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520d-fix-interactivo · forzar cache-bust");
+console.log("[ATLAS] build 20260520e-interactivo · drill-down + autoridades Wikidata + bordes más visibles");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -7,13 +7,13 @@ if ("serviceWorker" in navigator) {
 }
 
 const LEVELS = {
-  pais:          { file: "../data/web/pais.geojson",          weight: 1.5, color: "#5aa3ff", fill: 0.04, zMin: 0,  zMax: 5  },
-  provincias:    { file: "../data/web/provincias.geojson",    weight: 1.0, color: "#7df2c6", fill: 0.10, zMin: 5,  zMax: 7  },
-  departamentos: { file: "../data/web/departamentos.geojson", weight: 0.6, color: "#ffb454", fill: 0.10, zMin: 7,  zMax: 9  },
-  municipios:    { file: "../data/web/municipios.geojson",    weight: 0.5, color: "#ff6b6b", fill: 0.10, zMin: 9,  zMax: 11 },
-  localidades:   { file: "../data/web/localidades.geojson",   weight: 0,   color: "#c9a8ff", fill: 1.00, zMin: 9,  zMax: 12, point: true },
-  radios:        { dir: "../data/web/radios",                 weight: 0.3, color: "#5aa3ff", fill: 0.12, zMin: 12, zMax: 20, lazyByProv: true },
-  circuitos_pba: { file: "../data/web/pba_circuitos.geojson", weight: 0.4, color: "#b288e8", fill: 0.12, zMin: 9,  zMax: 14 },
+  pais:          { file: "../data/web/pais.geojson",          weight: 2.5, color: "#5aa3ff", fill: 0.06, zMin: 0,  zMax: 5  },
+  provincias:    { file: "../data/web/provincias.geojson",    weight: 2.0, color: "#7df2c6", fill: 0.14, zMin: 5,  zMax: 7  },
+  departamentos: { file: "../data/web/departamentos.geojson", weight: 1.2, color: "#ffb454", fill: 0.12, zMin: 7,  zMax: 9  },
+  municipios:    { file: "../data/web/municipios.geojson",    weight: 1.0, color: "#ff6b6b", fill: 0.14, zMin: 8,  zMax: 12 },
+  localidades:   { file: "../data/web/localidades.geojson",   weight: 1,   color: "#c9a8ff", fill: 1.00, zMin: 9,  zMax: 14, point: true },
+  radios:        { dir: "../data/web/radios",                 weight: 0.6, color: "#5aa3ff", fill: 0.14, zMin: 12, zMax: 20, lazyByProv: true },
+  circuitos_pba: { file: "../data/web/pba_circuitos.geojson", weight: 0.8, color: "#b288e8", fill: 0.14, zMin: 9,  zMax: 14 },
 };
 
 const VAR_SCALES = {
@@ -588,6 +588,16 @@ function fmtVal(v, varKey = activeVar) {
   if (Math.abs(v) >= 1000) return fmt.format(Math.round(v));
   return fmt2.format(v);
 }
+function drillTargetZoom(level) {
+  // Zoom target post-click para drill-down
+  if (level === "pais") return 6;
+  if (level === "provincias") return 8;
+  if (level === "departamentos") return 10;
+  if (level === "municipios") return 12;
+  if (level === "localidades") return 13;
+  return 14;
+}
+
 function indicLevelFor(level) {
   // En censo: pais devuelve null (manejo especial vía catalogs); resto, identidad
   // En elecciones: solo provincias/departamentos
@@ -709,7 +719,14 @@ function bindFeature(name, feat, lyr, parent) {
   lyr.bindTooltip(() => tooltipHTML(name, p), { sticky: true, className: "ttip-rich" });
   lyr.on("mouseover", e => {
     $("#hover-name").textContent = (p.nombre || `Radio ${p.codigo_indec}`);
-    try { e.target.setStyle({ weight: (LEVELS[name].weight || 0.5) + 1.5, fillOpacity: Math.min(0.6, LEVELS[name].fill + 0.18) }); } catch {}
+    try {
+      e.target.setStyle({
+        weight: (LEVELS[name].weight || 0.5) + 2.5,
+        color: "#fff",
+        fillOpacity: Math.min(0.55, LEVELS[name].fill + 0.25),
+      });
+      if (e.target.bringToFront) e.target.bringToFront();
+    } catch {}
   });
   lyr.on("mouseout", e => {
     $("#hover-name").textContent = "—";
@@ -872,7 +889,7 @@ function refreshLayerStyle(layer, name) {
 }
 
 // -- Selección + panel info --
-async function onSelect(name, props, lyr, level) {
+async function onSelect(name, props, lyr, level, opts = {}) {
   if (selected) {
     try {
       if (selectedLevel === "radios") Object.values(radioProvCache).forEach(l => { try { l.resetStyle(selected); } catch {} });
@@ -880,7 +897,18 @@ async function onSelect(name, props, lyr, level) {
     } catch {}
   }
   selected = lyr; selectedLevel = level; selectedCode = props.codigo_indec;
-  try { lyr.setStyle({ weight: 2.5, color: "#fff", fillOpacity: 0.22 }); lyr.bringToFront(); } catch {}
+  try { lyr.setStyle({ weight: 3.0, color: "#fff", fillOpacity: 0.30 }); lyr.bringToFront(); } catch {}
+
+  // Drill-down: click en un nivel hace zoom + carga el nivel siguiente como overlay
+  if (!opts.fromDrill) {
+    try {
+      const b = lyr.getBounds ? lyr.getBounds() : null;
+      if (b) {
+        map.fitBounds(b, { padding: [40, 40], maxZoom: drillTargetZoom(level) });
+        // Después del fit, autoLevel se dispara por moveend y cambia capa
+      }
+    } catch {}
+  }
 
   $("#sel-name").textContent = name;
   const meta = [];
@@ -942,6 +970,7 @@ async function refreshSelectedPanel(props) {
   renderExtras(ind);
   renderAllDatasets(code, selectedLevel).catch(() => {});
   renderSimilar(code, selectedLevel).catch(() => {});
+  renderAutoridades(code);
   switchTab("info");
   loadFeatureSerieIfAvailable(code).catch(() => {});
   // Si NO hay serie embebida (sparkline ya renderizado por renderSpark), intentar trayectoria electoral
@@ -1005,6 +1034,27 @@ async function renderTrayectoria(code, level) {
     label: c.replace("_pct", ""), points: series[c],
   }));
   renderMultiSpark(renderable, "Trayectoria electoral 2015-2023");
+}
+
+function renderAutoridades(code) {
+  const box = $("#sel-autoridades");
+  const body = $("#sel-autoridades-body");
+  if (!autoridades || !code) { box.style.display = "none"; return; }
+  const items = [];
+  const intend = autoridades.intendentes_por_depto?.[code];
+  if (intend) {
+    items.push(`<span class="ds-var"><span class="k">Intendente</span><span class="v">${intend.intendente}</span></span>`);
+    if (intend.partido_intendente) items.push(`<span class="ds-var"><span class="k">Partido</span><span class="v">${intend.partido_intendente}</span></span>`);
+  }
+  const provCode = code.substring(0, 2);
+  const gob = autoridades.gobernadores_por_provincia?.[provCode];
+  if (gob) {
+    items.push(`<span class="ds-var"><span class="k">Gobernador</span><span class="v">${gob.gobernador}</span></span>`);
+    if (gob.partido_gob) items.push(`<span class="ds-var"><span class="k">Partido</span><span class="v">${gob.partido_gob}</span></span>`);
+  }
+  if (!items.length) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  body.innerHTML = items.join("");
 }
 
 async function renderSimilar(code, level) {
@@ -3929,6 +3979,10 @@ $("#swing-apply").addEventListener("click", applySwing);
 });
 
 $("#lbl-toggle").addEventListener("click", toggleLabels);
+
+// Autoridades (Wikidata)
+let autoridades = null;
+fetch("../data/web/autoridades.json").then(r => r.ok ? r.json() : null).then(d => { autoridades = d; });
 
 // Carga meta de datasets (fechas de actualización)
 let dataMeta = null;

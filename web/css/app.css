@@ -311,6 +311,8 @@ a:hover{text-decoration:underline}
   background:var(--map-bg);
   position:relative;
 }
+.leaflet-interactive{cursor:pointer !important}
+.leaflet-interactive:hover{filter:brightness(1.15)}
 #legend{
   position:absolute;
   bottom:18px;left:18px;z-index:500;

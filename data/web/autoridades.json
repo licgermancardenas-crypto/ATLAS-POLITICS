@@ -1,0 +1,184 @@
+{
+  "intendentes_por_depto": {
+    "06861": {
+      "intendente": "Jorge Macri",
+      "partido_intendente": "Propuesta Republicana",
+      "wikidata_id_muni": "Q2099330",
+      "wikidata_id_int": "Q5935527",
+      "_match": "Partido de Vicente López"
+    },
+    "06412": {
+      "intendente": "Mario Alberto Ishii",
+      "partido_intendente": "Frente para la Victoria",
+      "wikidata_id_muni": "Q2329785",
+      "wikidata_id_int": "Q9029098",
+      "_match": "Partido de José C. Paz"
+    },
+    "06658": {
+      "intendente": "Mayra Mendoza",
+      "partido_intendente": "Partido Justicialista",
+      "wikidata_id_muni": "Q1855418",
+      "wikidata_id_int": "Q21856192",
+      "_match": "Partido de Quilmes"
+    },
+    "06651": {
+      "intendente": "Facundo David Castelli",
+      "partido_intendente": "Cambiemos",
+      "wikidata_id_muni": "Q2761723",
+      "wikidata_id_int": "Q33126435",
+      "_match": "Partido de Puan"
+    },
+    "06770": {
+      "intendente": "Cecilio Salazar",
+      "partido_intendente": "Cambiemos",
+      "wikidata_id_muni": "Q1925048",
+      "wikidata_id_int": "Q21402108",
+      "_match": "Partido de San Pedro"
+    },
+    "06532": {
+      "intendente": "Juan Ignacio Ustarroz",
+      "partido_intendente": "",
+      "wikidata_id_muni": "Q1027041",
+      "wikidata_id_int": "Q115046748",
+      "_match": "Mercedes"
+    },
+    "06028": {
+      "intendente": "Mariano Cascallares",
+      "partido_intendente": "Partido Justicialista",
+      "wikidata_id_muni": "Q1399432",
+      "wikidata_id_int": "Q20990904",
+      "_match": "Partido de Almirante Brown"
+    },
+    "06679": {
+      "intendente": "Javier Ulises Reynoso",
+      "partido_intendente": "",
+      "wikidata_id_muni": "Q2149622",
+      "wikidata_id_int": "Q21704719",
+      "_match": "Partido de Rivadavia"
+    }
+  },
+  "gobernadores_por_provincia": {
+    "66": {
+      "gobernador": "Gustavo Sáenz",
+      "partido_gob": "",
+      "wikidata_id_gob": "Q21002940",
+      "_match": "Provincia de Salta"
+    },
+    "38": {
+      "gobernador": "Carlos Sadir",
+      "partido_gob": "Unión Cívica Radical",
+      "wikidata_id_gob": "Q118596781",
+      "_match": "Provincia de Jujuy"
+    },
+    "10": {
+      "gobernador": "Raúl Jalil",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q19760254",
+      "_match": "Provincia de Catamarca"
+    },
+    "46": {
+      "gobernador": "Ricardo Quintela",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q72707787",
+      "_match": "Provincia de La Rioja"
+    },
+    "82": {
+      "gobernador": "Maximiliano Pullaro",
+      "partido_gob": "Unión Cívica Radical",
+      "wikidata_id_gob": "Q28092390",
+      "_match": "Provincia de Santa Fe"
+    },
+    "30": {
+      "gobernador": "Rogelio Frigerio",
+      "partido_gob": "Propuesta Republicana",
+      "wikidata_id_gob": "Q11184187",
+      "_match": "Provincia de Entre Ríos"
+    },
+    "58": {
+      "gobernador": "Rolando Figueroa",
+      "partido_gob": "Movimiento Popular Neuquino",
+      "wikidata_id_gob": "Q30243948",
+      "_match": "Provincia de Neuquén"
+    },
+    "74": {
+      "gobernador": "Claudio Poggi",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q4838522",
+      "_match": "Provincia de San Luis"
+    },
+    "78": {
+      "gobernador": "Claudio Vidal",
+      "partido_gob": "Somos Energía para Renovar Santa Cruz",
+      "wikidata_id_gob": "Q111481645",
+      "_match": "Provincia de Santa Cruz"
+    },
+    "62": {
+      "gobernador": "Alberto Weretilneck",
+      "partido_gob": "Juntos Somos Río Negro",
+      "wikidata_id_gob": "Q3740202",
+      "_match": "Provincia de Río Negro"
+    },
+    "06": {
+      "gobernador": "Axel Kicillof",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q3754443",
+      "_match": "Provincia de Buenos Aires"
+    },
+    "22": {
+      "gobernador": "Juan Carlos Bacileff Ivanoff",
+      "partido_gob": "",
+      "wikidata_id_gob": "Q5849619",
+      "_match": "Provincia de Chaco"
+    },
+    "54": {
+      "gobernador": "Hugo Passalacqua",
+      "partido_gob": "Partido de la Concordia Social",
+      "wikidata_id_gob": "Q18224574",
+      "_match": "Provincia de Misiones"
+    },
+    "26": {
+      "gobernador": "Ignacio Agustín Torres",
+      "partido_gob": "",
+      "wikidata_id_gob": "Q104433320",
+      "_match": "Provincia de Chubut"
+    },
+    "34": {
+      "gobernador": "Gildo PENEEE",
+      "partido_gob": "Frente para la Victoria",
+      "wikidata_id_gob": "Q1524240",
+      "_match": "Provincia de Formosa"
+    },
+    "50": {
+      "gobernador": "Alfredo Cornejo",
+      "partido_gob": "Unión Cívica Radical",
+      "wikidata_id_gob": "Q5668101",
+      "_match": "Provincia de Mendoza"
+    },
+    "42": {
+      "gobernador": "Sergio Raúl Ziliotto",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q21856301",
+      "_match": "Provincia de La Pampa"
+    },
+    "14": {
+      "gobernador": "Martín Llaryora",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q6002748",
+      "_match": "Provincia de Córdoba"
+    },
+    "70": {
+      "gobernador": "Marcelo Orrego",
+      "partido_gob": "",
+      "wikidata_id_gob": "Q62000019",
+      "_match": "Provincia de San Juan"
+    },
+    "90": {
+      "gobernador": "Osvaldo Jaldo",
+      "partido_gob": "Partido Justicialista",
+      "wikidata_id_gob": "Q108611599",
+      "_match": "Provincia de Tucumán"
+    }
+  },
+  "fuente": "Wikidata SPARQL · query.wikidata.org",
+  "actualizado": "2026-05-20"
+}
