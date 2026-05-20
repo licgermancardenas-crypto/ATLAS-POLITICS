@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520e-interactivo · drill-down + autoridades Wikidata + bordes más visibles");
+console.log("[ATLAS] build 20260520f-drilldown · drill-down real con filtro de hijos + breadcrumb");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -589,13 +589,122 @@ function fmtVal(v, varKey = activeVar) {
   return fmt2.format(v);
 }
 function drillTargetZoom(level) {
-  // Zoom target post-click para drill-down
   if (level === "pais") return 6;
   if (level === "provincias") return 8;
   if (level === "departamentos") return 10;
   if (level === "municipios") return 12;
   if (level === "localidades") return 13;
   return 14;
+}
+
+// -- Drill-down state --
+const drillStack = []; // [{level, code, name}, ...]
+const LEVEL_ORDER = ["pais", "provincias", "departamentos", "municipios", "localidades"];
+function nextLevel(level) {
+  const i = LEVEL_ORDER.indexOf(level);
+  return i >= 0 && i < LEVEL_ORDER.length - 1 ? LEVEL_ORDER[i + 1] : null;
+}
+
+function featureMatchesParent(level, feat, parent) {
+  if (!parent) return true;
+  const p = feat.properties || {};
+  const code = p.codigo_indec || "";
+  // Localidades: codigo_indec 8-digit "PPDDDLLL"
+  if (level === "localidades") {
+    if (parent.level === "provincias") return code.substring(0, 2) === parent.code;
+    if (parent.level === "departamentos") return code.substring(0, 5) === parent.code;
+    return code.substring(0, 5) === parent.code;
+  }
+  // Municipios + departamentos: codigo_indec 5-digit "PPDDD"
+  if (parent.level === "provincias" || parent.code.length === 2) {
+    return code.substring(0, 2) === parent.code.substring(0, 2);
+  }
+  if (parent.level === "departamentos" || parent.code.length === 5) {
+    return code === parent.code || code.substring(0, 5) === parent.code;
+  }
+  return true;
+}
+
+function applyDrillFilter() {
+  const parent = drillStack.length ? drillStack[drillStack.length - 1] : null;
+  for (const lvl of Object.keys(layerCache)) {
+    const layer = layerCache[lvl];
+    if (!layer) continue;
+    layer.eachLayer(l => {
+      if (!l.feature) return;
+      const matches = featureMatchesParent(lvl, l.feature, parent);
+      try {
+        if (matches) {
+          // Restaurar estilo normal
+          layer.resetStyle(l);
+          if (l.setStyle) l.setStyle({ opacity: 1, fillOpacity: LEVELS[lvl].fill });
+        } else {
+          // Ocultar (sin remover de map para evitar re-add overhead)
+          if (l.setStyle) l.setStyle({ opacity: 0, fillOpacity: 0, weight: 0 });
+        }
+      } catch {}
+    });
+  }
+}
+
+function fitToDrillTarget() {
+  const parent = drillStack[drillStack.length - 1];
+  if (!parent) {
+    // Volver a vista país
+    map.setView([-38.5, -63.5], 4);
+    return;
+  }
+  // Buscar el feature parent en alguna capa cacheada para hacer fitBounds
+  for (const lvl of Object.keys(layerCache)) {
+    const layer = layerCache[lvl];
+    if (!layer) continue;
+    let found = null;
+    layer.eachLayer(l => {
+      if (found) return;
+      if (l.feature?.properties.codigo_indec === parent.code) found = l;
+    });
+    if (found?.getBounds) {
+      try { map.fitBounds(found.getBounds(), { padding: [50, 50], maxZoom: drillTargetZoom(parent.level) }); }
+      catch {}
+      return;
+    }
+  }
+}
+
+function renderBreadcrumb() {
+  const el = $("#breadcrumb");
+  if (!el) return;
+  const crumbs = [{ name: "Argentina", level: "pais", code: null }, ...drillStack];
+  el.innerHTML = crumbs.map((c, i) => {
+    const isLast = i === crumbs.length - 1;
+    const sep = i > 0 ? `<span class="sep">›</span>` : "";
+    return `${sep}<span class="crumb ${isLast ? 'current' : ''}" data-i="${i}">${c.name}</span>`;
+  }).join("");
+  $$("#breadcrumb .crumb").forEach(s => s.addEventListener("click", () => {
+    const i = +s.dataset.i;
+    drillStack.length = i;  // recortar hasta el clickeado
+    applyDrillFilter();
+    fitToDrillTarget();
+    renderBreadcrumb();
+  }));
+}
+
+async function drillInto(props, level) {
+  const next = nextLevel(level);
+  if (!next) return false;
+  drillStack.push({
+    level,
+    code: props.codigo_indec || "",
+    name: (props.nombre || "")
+      .replace(/^Provincia (de|del) /i, "")
+      .replace(/^(Departamento|Partido de|Municipio de|Comuna) /i, ""),
+  });
+  // Cargar el siguiente nivel
+  await setLevel(next, { fit: false });
+  applyDrillFilter();
+  fitToDrillTarget();
+  renderBreadcrumb();
+  return true;
 }
 
 function indicLevelFor(level) {
@@ -899,15 +1008,10 @@ async function onSelect(name, props, lyr, level, opts = {}) {
   selected = lyr; selectedLevel = level; selectedCode = props.codigo_indec;
   try { lyr.setStyle({ weight: 3.0, color: "#fff", fillOpacity: 0.30 }); lyr.bringToFront(); } catch {}
 
-  // Drill-down: click en un nivel hace zoom + carga el nivel siguiente como overlay
-  if (!opts.fromDrill) {
-    try {
-      const b = lyr.getBounds ? lyr.getBounds() : null;
-      if (b) {
-        map.fitBounds(b, { padding: [40, 40], maxZoom: drillTargetZoom(level) });
-        // Después del fit, autoLevel se dispara por moveend y cambia capa
-      }
-    } catch {}
+  // Drill-down: click en una feature dispara navegación al nivel siguiente
+  // (excepto si ya estamos en último nivel o el click viene de breadcrumb/programático)
+  if (!opts.fromDrill && nextLevel(level) && LEVEL_ORDER.includes(level)) {
+    drillInto(props, level).catch(() => {});
   }
 
   $("#sel-name").textContent = name;
@@ -1439,6 +1543,8 @@ async function setLevel(name, opts = {}) {
     if (opts.fit !== false) { try { map.fitBounds(lyr.getBounds(), { padding: [20, 20] }); } catch {} }
   }
   restyleActive();
+  // Re-aplicar drill filter después de cargar
+  if (drillStack.length) applyDrillFilter();
   syncHash();
 }
 
@@ -1451,6 +1557,8 @@ map.on("zoomend moveend", () => {
   labelTimer = setTimeout(rebuildLabels, 250);
 });
 async function autoLevel() {
+  // Si el usuario está en drill-down explícito, no auto-cambiar capa
+  if (drillStack.length) return;
   const z = map.getZoom();
   let next = activeLevel;
   if      (z >= 12) next = "radios";
@@ -4122,6 +4230,7 @@ async function showCountryKpis() {
   if (!fromHash) await setLevel("pais", { fit: true });
   await showCountryKpis();
   setTimeout(rebuildLabels, 800);
+  renderBreadcrumb();
   await Promise.all([loadGeo("provincias"), loadIndicadores("provincias")]);
   loadGeo("departamentos").then(() => loadIndicadores("departamentos").then(() => activeLevel === "departamentos" && computeStats(activeLevel)));
   loadGeo("municipios");
