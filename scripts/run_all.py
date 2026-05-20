@@ -105,6 +105,11 @@ def main() -> None:
     fail_n = sum(1 for _, s, _ in results if s == "FAIL")
     total_time = sum(t for _, _, t in results)
     print(f"=== {ok_n} OK · {fail_n} FAIL · {total_time:.0f}s total ===")
+    # Regenerar meta.json al final
+    meta_script = SCRIPTS / "build_meta.py"
+    if meta_script.exists():
+        print("\n[meta]")
+        run(meta_script)
 
 
 if __name__ == "__main__":

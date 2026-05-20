@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520a · Δ correlación 2019-23 + IC95 Wilson en panel");
+console.log("[ATLAS] build 20260520b · Logit binario + meta de actualizaciones");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -1442,6 +1442,9 @@ function populateVarSelect() {
 $("#ds-sel").addEventListener("change", async e => {
   activeDataset = e.target.value;
   populateVarSelect();
+  // Mostrar fecha de actualización en status
+  const upd = datasetUpdatedDate(activeDataset);
+  if (upd) setStatus(`${DATASETS[activeDataset]?.label} · actualizado ${upd}`);
   // Mostrar/ocultar control de animación
   const isElectoral = /^(20\d\d_)/.test(activeDataset);
   if (isElectoral) showAnim(); else hideAnim();
@@ -3721,6 +3724,117 @@ async function fitModelo() {
 
 $("#mod-fit").addEventListener("click", fitModelo);
 
+// -- Modelo Logit (regresión logística binaria) --
+// Variable Y binaria: 1 si % de la coalición > umbral (default = mediana)
+// Algoritmo: IRLS simplificado / Newton-Raphson
+function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+function fitLogit(X, y, maxIter = 50, tol = 1e-6) {
+  const n = X.length, p = X[0].length;
+  let beta = new Array(p).fill(0);
+  for (let it = 0; it < maxIter; it++) {
+    const probs = X.map(r => sigmoid(r.reduce((s, x, j) => s + x * beta[j], 0)));
+    const W = probs.map(pr => pr * (1 - pr));
+    // Gradient = X' (y - probs)
+    const grad = new Array(p).fill(0);
+    for (let i = 0; i < n; i++) {
+      const e = y[i] - probs[i];
+      for (let j = 0; j < p; j++) grad[j] += X[i][j] * e;
+    }
+    // Hessian = X' W X
+    const H = Array.from({ length: p }, () => new Array(p).fill(0));
+    for (let i = 0; i < n; i++) {
+      for (let a = 0; a < p; a++) {
+        for (let b = 0; b < p; b++) H[a][b] += W[i] * X[i][a] * X[i][b];
+      }
+    }
+    // Solve H * delta = grad mediante Gauss-Jordan
+    const M = H.map((row, i) => [...row, grad[i]]);
+    let singular = false;
+    for (let i = 0; i < p; i++) {
+      let mx = i;
+      for (let r = i + 1; r < p; r++) if (Math.abs(M[r][i]) > Math.abs(M[mx][i])) mx = r;
+      [M[i], M[mx]] = [M[mx], M[i]];
+      if (Math.abs(M[i][i]) < 1e-12) { singular = true; break; }
+      for (let j = i; j <= p; j++) M[i][j] /= M[i][i];
+      for (let r = 0; r < p; r++) if (r !== i) {
+        const f = M[r][i];
+        for (let j = i; j <= p; j++) M[r][j] -= f * M[i][j];
+      }
+    }
+    if (singular) return { beta, converged: false };
+    const delta = M.map(row => row[p]);
+    let maxD = 0;
+    for (let j = 0; j < p; j++) {
+      beta[j] += delta[j];
+      if (Math.abs(delta[j]) > maxD) maxD = Math.abs(delta[j]);
+    }
+    if (maxD < tol) return { beta, iters: it + 1, converged: true };
+  }
+  return { beta, converged: false };
+}
+
+async function fitLogitModelo() {
+  const ds = $("#mod-ds").value;
+  const yVar = $("#mod-var").value;
+  const censo = await loadIndicadores("departamentos", "censo");
+  const elec = await loadIndicadores("departamentos", ds);
+  if (!censo || !elec) { $("#mod-stats").innerHTML = "Datos no disponibles"; return; }
+
+  const codes = Object.keys(elec).filter(c => {
+    const e = elec[c], x = censo[c];
+    if (!x || e[yVar] == null || !isFinite(e[yVar])) return false;
+    return MODEL_FEATURES.every(f => x[f] != null && isFinite(x[f]));
+  });
+  if (codes.length < 30) { $("#mod-stats").innerHTML = "Pocas observaciones"; return; }
+
+  // Binarizar Y: 1 si supera la mediana
+  const yvals = codes.map(c => elec[c][yVar]).sort((a, b) => a - b);
+  const median = yvals[Math.floor(yvals.length / 2)];
+  const y = codes.map(c => elec[c][yVar] > median ? 1 : 0);
+  const featCols = MODEL_FEATURES.map(f => standardize(codes.map(c => censo[c][f])));
+  const X = codes.map((_, i) => [1, ...featCols.map(s => s.std[i])]);
+  const result = fitLogit(X, y);
+  if (!result.beta) { $("#mod-stats").innerHTML = "Falló fit"; return; }
+  const beta = result.beta;
+
+  // Predict + accuracy
+  const preds = X.map(r => sigmoid(r.reduce((s, x, j) => s + x * beta[j], 0)));
+  let correct = 0;
+  preds.forEach((p, i) => { if ((p >= 0.5 ? 1 : 0) === y[i]) correct++; });
+  const acc = (correct / y.length) * 100;
+  const positiveRate = (y.reduce((a, b) => a + b, 0) / y.length) * 100;
+
+  $("#mod-stats").innerHTML = `
+    <span>${codes.length} deptos</span>
+    <span>Y=1 (≥${(median * 100).toFixed(1)}%): ${positiveRate.toFixed(0)}%</span>
+    <span>Acc: <span class="r">${acc.toFixed(1)}%</span></span>
+    <span>${result.converged ? '✓ conv' : '✗ no conv'}</span>
+  `;
+  const labelMap = {
+    personas_por_hogar: "Personas/hogar",
+    personas_por_vivienda: "Personas/vivienda",
+    idx_masculinidad: "Índ. masculinidad",
+    personas: "Población",
+    viv_part_h: "Viv. habitadas",
+  };
+  const maxC = Math.max(...beta.slice(1).map(Math.abs));
+  $("#mod-coefs").innerHTML = beta.slice(1).map((b, i) => {
+    const f = MODEL_FEATURES[i];
+    const sign = b >= 0 ? "pos" : "neg";
+    const widthPct = Math.abs(b) / maxC * 50;
+    const offset = b >= 0
+      ? `width:${widthPct}%;background:#7df2c6`
+      : `width:${widthPct}%;transform:translateX(-100%);background:#ff6b6b`;
+    return `<div class="mod-row">
+      <span class="lbl">${labelMap[f] || f}</span>
+      <span class="coef ${sign}">${b >= 0 ? "+" : ""}${b.toFixed(2)}</span>
+      <span style="font-size:10px;color:var(--muted)">log-odds</span>
+      <div class="bar"><span style="${offset}"></span></div>
+    </div>`;
+  }).join("");
+}
+$("#mod-logit").addEventListener("click", fitLogitModelo);
+
 // -- Swing --
 function populateSwingSelects() {
   const opts = Object.entries(DATASETS)
@@ -3816,6 +3930,21 @@ $("#swing-apply").addEventListener("click", applySwing);
 });
 
 $("#lbl-toggle").addEventListener("click", toggleLabels);
+
+// Carga meta de datasets (fechas de actualización)
+let dataMeta = null;
+fetch("../data/web/_meta.json").then(r => r.ok ? r.json() : null).then(m => { dataMeta = m; });
+
+function datasetUpdatedDate(dsKey) {
+  if (!dataMeta) return null;
+  // Inferir archivo principal a partir del fileFor()
+  const ds = DATASETS[dsKey];
+  if (!ds || !ds.fileFor) return null;
+  const path = ds.fileFor("provincias") || ds.fileFor("departamentos");
+  if (!path) return null;
+  const rel = path.replace("../data/web/", "");
+  return dataMeta.files?.[rel]?.mtime || null;
+}
 
 // Theme toggle (dark/light)
 const themeKey = "atlas-theme";

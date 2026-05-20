@@ -1,0 +1,333 @@
+{
+  "generated": "2026-05-20T14:29:30Z",
+  "files": {
+    "agro_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 2.6
+    },
+    "caba_comunal.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 6.5
+    },
+    "comercio_exterior.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 1.7
+    },
+    "covid_vac_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 4.4
+    },
+    "economia_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 8.8
+    },
+    "educacion_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 3.0
+    },
+    "egresos_pba_municipal.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 25.5
+    },
+    "elecciones_2015_balotaje_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 74.8
+    },
+    "elecciones_2015_balotaje_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 4.3
+    },
+    "elecciones_2015_generales_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 138.0
+    },
+    "elecciones_2015_generales_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 7.4
+    },
+    "elecciones_2017_diputados_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 102.5
+    },
+    "elecciones_2017_diputados_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 5.5
+    },
+    "elecciones_2019_generales_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 120.5
+    },
+    "elecciones_2019_generales_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 6.5
+    },
+    "elecciones_2019_paso_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 120.0
+    },
+    "elecciones_2019_paso_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 6.5
+    },
+    "elecciones_2021_diputados_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 121.9
+    },
+    "elecciones_2021_diputados_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 6.4
+    },
+    "elecciones_2023_balotaje_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 87.7
+    },
+    "elecciones_2023_balotaje_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 4.8
+    },
+    "elecciones_2023_diputados_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 128.8
+    },
+    "elecciones_2023_diputados_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 6.7
+    },
+    "elecciones_2023_generales_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 133.7
+    },
+    "elecciones_2023_generales_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 7.0
+    },
+    "elecciones_2023_senadores_departamento.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 56.1
+    },
+    "elecciones_2023_senadores_provincia.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 2.2
+    },
+    "elecciones_pba_circuitos.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 120.0
+    },
+    "empleo_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 1.9
+    },
+    "energia_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 2.2
+    },
+    "ganaderia_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 4.8
+    },
+    "indicadores_departamentos.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 128.7
+    },
+    "indicadores_localidades.json": {
+      "mtime": "2026-05-17",
+      "size_kb": 535.5
+    },
+    "indicadores_provincias.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 6.0
+    },
+    "indicadores_radios.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 2655.6
+    },
+    "internet_provincia.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 3.1
+    },
+    "ipc_nacional.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 4.5
+    },
+    "ipc_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 16.5
+    },
+    "mineria_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 8.4
+    },
+    "pba_circuitos_historico.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 769.7
+    },
+    "pba_elecciones_municipal.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 184.4
+    },
+    "pba_municipal.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 36.9
+    },
+    "pesca_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 0.5
+    },
+    "pobreza_nacional.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 2.3
+    },
+    "pobreza_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 10.2
+    },
+    "presupuesto_nacional.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 2.8
+    },
+    "salud_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 3.4
+    },
+    "servicios_provincia.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 1.5
+    },
+    "socio_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 19.5
+    },
+    "trade_bloques_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 6.1
+    },
+    "trade_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 5.2
+    },
+    "transporte_provincia.json": {
+      "mtime": "2026-05-19",
+      "size_kb": 3.8
+    },
+    "vacunas_provincia.json": {
+      "mtime": "2026-05-18",
+      "size_kb": 6.0
+    },
+    "departamentos.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 3548.8
+    },
+    "gobiernos_locales.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 532.2
+    },
+    "localidades.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 1105.8
+    },
+    "municipios.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 5200.8
+    },
+    "pais.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 718.1
+    },
+    "pba_circuitos.geojson": {
+      "mtime": "2026-05-19",
+      "size_kb": 1657.9
+    },
+    "provincias.geojson": {
+      "mtime": "2026-05-17",
+      "size_kb": 1379.2
+    },
+    "radios/02.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1624.0
+    },
+    "radios/06.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 11593.1
+    },
+    "radios/10.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 979.7
+    },
+    "radios/14.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 5260.5
+    },
+    "radios/18.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 3335.1
+    },
+    "radios/22.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1550.6
+    },
+    "radios/26.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1204.8
+    },
+    "radios/30.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 4551.6
+    },
+    "radios/34.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1125.8
+    },
+    "radios/38.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1622.6
+    },
+    "radios/42.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 457.3
+    },
+    "radios/54.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 2134.7
+    },
+    "radios/58.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1725.1
+    },
+    "radios/62.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1194.7
+    },
+    "radios/66.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 2285.3
+    },
+    "radios/70.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 888.0
+    },
+    "radios/74.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 864.0
+    },
+    "radios/78.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 643.7
+    },
+    "radios/82.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 3397.0
+    },
+    "radios/86.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1295.0
+    },
+    "radios/90.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 1893.0
+    },
+    "radios/94.geojson": {
+      "mtime": "2026-05-18",
+      "size_kb": 387.7
+    }
+  }
+}

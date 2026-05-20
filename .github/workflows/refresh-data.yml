@@ -44,6 +44,7 @@ jobs:
           python scripts/21_etl_energia_provincia.py || echo "  ✗ energia"
           python scripts/23_etl_mineria_provincia.py || echo "  ✗ mineria"
           python scripts/25_etl_pobreza_aglomerado.py || echo "  ✗ pobreza"
+          python scripts/build_meta.py || echo "  ✗ meta"
 
       - name: Commit + push si hay cambios
         run: |
