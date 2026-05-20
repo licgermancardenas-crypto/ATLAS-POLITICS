@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520c · FIX SyntaxError ramp duplicate (rompía todo el JS)");
+console.log("[ATLAS] build 20260520d-fix-interactivo · forzar cache-bust");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
