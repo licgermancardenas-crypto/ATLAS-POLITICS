@@ -1,5 +1,5 @@
 // ATLAS politics — frontend  (build 20260518a)
-console.log("[ATLAS] build 20260520b · Logit binario + meta de actualizaciones");
+console.log("[ATLAS] build 20260520c · FIX SyntaxError ramp duplicate (rompía todo el JS)");
 
 // Service worker registration
 if ("serviceWorker" in navigator) {
@@ -2982,7 +2982,6 @@ async function runTemporalClusters() {
   const total2023 = new Array(k).fill(0);
   for (let r = 0; r < k; r++) for (let c = 0; c < k; c++) total2023[c] += mat[r][c];
   const totalAll = colCount.reduce((a, b) => a + b, 0) || 1;
-  const ramp = VAR_SCALES.cluster;
   // Posiciones Y de los nodos (left=2019, right=2023)
   const gap = 4;
   const innerH = H - m.t - m.b - gap * (k - 1);
